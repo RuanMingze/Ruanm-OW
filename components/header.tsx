@@ -8,6 +8,7 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = 'https://pyywrxrmtehucmkpqkdi.supabase.co'
 const supabaseKey = 'sb_publishable_Ztie93n2pi48h_rAIuviyA_ftjAIDuj'
 const supabase = createClient(supabaseUrl, supabaseKey)
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
 
 const navLinks = [
   { label: "关于", href: "#about" },
@@ -44,9 +45,9 @@ export function Header() {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50">
       <div className="mx-auto max-w-7xl flex items-center justify-between px-6 py-4 lg:px-8">
-        <a href="/" className="flex items-center gap-3">
+        <a href={`${basePath}/`} className="flex items-center gap-3">
           <img
-            src="/logo.png"
+            src={`${basePath}/logo.png`}
             alt="Ruanm Logo"
             className="h-8 w-auto"
           />
@@ -58,11 +59,9 @@ export function Header() {
         <nav className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex items-center gap-8 hidden md:flex" aria-label="Main navigation">
           {navLinks.map((link) => {
             if (link.label === "产品" && pathname === '/products') return null
-            const href = pathname === '/products' && link.href.startsWith('#') 
-              ? `/${link.href}` 
-              : link.href.startsWith('#') && pathname !== '/' 
-              ? `/${link.href}`
-              : link.href
+            const href = link.href.startsWith('#') 
+              ? link.href
+              : `${basePath}${link.href}`
             return (
               <a
                 key={link.href}
@@ -85,7 +84,7 @@ export function Header() {
           </button>
           {mounted && user ? (
             <a
-              href="/user"
+              href={`${basePath}/user`}
               className="flex items-center justify-center rounded-full border border-border px-4 py-2 text-sm text-primary hover:bg-accent transition-colors duration-300"
               aria-label="用户中心"
             >
@@ -94,7 +93,7 @@ export function Header() {
             </a>
           ) : (
             <a
-              href="/login"
+              href={`${basePath}/login`}
               className="flex items-center justify-center rounded-full border border-border px-4 py-2 text-sm text-primary hover:bg-accent transition-colors duration-300"
               aria-label="登录"
             >
@@ -120,7 +119,7 @@ export function Header() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyPress={(e) => {
                     if (e.key === 'Enter' && searchQuery.trim()) {
-                      window.location.href = `/products?search=${encodeURIComponent(searchQuery)}`
+                      window.location.href = `${basePath}/products?search=${encodeURIComponent(searchQuery)}`
                     }
                   }}
                   placeholder="搜索产品..."
@@ -130,7 +129,7 @@ export function Header() {
                 <button
                   onClick={() => {
                     if (searchQuery.trim()) {
-                      window.location.href = `/products?search=${encodeURIComponent(searchQuery)}`
+                      window.location.href = `${basePath}/products?search=${encodeURIComponent(searchQuery)}`
                     }
                   }}
                   className="rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
@@ -156,11 +155,9 @@ export function Header() {
           <nav className="flex flex-col px-6 py-6 gap-4" aria-label="Mobile navigation">
             {navLinks.map((link) => {
               if (link.label === "产品" && pathname === '/products') return null
-              const href = pathname === '/products' && link.href.startsWith('#') 
-                ? `/${link.href}` 
-                : link.href.startsWith('#') && pathname !== '/' 
-                ? `/${link.href}`
-                : link.href
+              const href = link.href.startsWith('#') 
+                ? link.href
+                : `${basePath}${link.href}`
               return (
                 <a
                   key={link.href}
@@ -174,7 +171,7 @@ export function Header() {
             })}
             {mounted && user ? (
               <a
-                href="/user"
+                href={`${basePath}/user`}
                 onClick={() => setMobileOpen(false)}
                 className="mt-2 inline-flex items-center justify-center rounded-full border border-border px-5 py-2.5 text-sm text-primary hover:bg-accent transition-colors"
               >
@@ -183,7 +180,7 @@ export function Header() {
               </a>
             ) : (
               <a
-                href="/login"
+                href={`${basePath}/login`}
                 onClick={() => setMobileOpen(false)}
                 className="mt-2 inline-flex items-center justify-center rounded-full border border-border px-5 py-2.5 text-sm text-primary hover:bg-accent transition-colors"
               >

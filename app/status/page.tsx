@@ -48,7 +48,8 @@ function StatusPage() {
 
   const loadStatuses = async () => {
     try {
-      const response = await fetch('/statuses.json')
+      const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
+      const response = await fetch(`${basePath}/statuses.json`)
       if (response.ok) {
         const data = await response.json()
         setStatuses(data)

@@ -2,6 +2,8 @@
 
 import { usePathname } from 'next/navigation'
 
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
+
 export function Footer() {
   const pathname = usePathname()
   const isProductsPage = pathname === '/products'
@@ -17,21 +19,28 @@ export function Footer() {
         </div>
 
         <nav className="flex items-center gap-8" aria-label="Footer navigation">
-          {[
-            { label: "关于", href: isProductsPage ? "/#about" : "#about" },
-            { label: "理念", href: isProductsPage ? "/#philosophy" : "#philosophy" },
-            { label: "服务", href: isProductsPage ? "/#services" : "#services" },
-            { label: "产品", href: "/products" },
-            { label: "联系", href: isProductsPage ? "/#contact" : "#contact" },
-          ].map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
-              className="text-sm text-muted-foreground hover:text-primary transition-colors"
-            >
-              {link.label}
-            </a>
-          ))}
+          {
+            [
+              { label: "关于", href: "#about" },
+              { label: "理念", href: "#philosophy" },
+              { label: "服务", href: "#services" },
+              { label: "产品", href: "/products" },
+              { label: "联系", href: "#contact" },
+            ].map((link) => {
+              const href = link.href.startsWith('#') 
+                ? link.href
+                : `${basePath}${link.href}`
+              return (
+                <a
+                  key={link.href}
+                  href={href}
+                  className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                >
+                  {link.label}
+                </a>
+              )
+            })
+          }
         </nav>
 
         <p className="text-xs text-muted-foreground">
