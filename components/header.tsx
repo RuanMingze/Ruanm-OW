@@ -9,6 +9,8 @@ const supabaseUrl = 'https://pyywrxrmtehucmkpqkdi.supabase.co'
 const supabaseKey = 'sb_publishable_Ztie93n2pi48h_rAIuviyA_ftjAIDuj'
 const supabase = createClient(supabaseUrl, supabaseKey)
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
+console.log('Header - NEXT_PUBLIC_BASE_PATH:', process.env.NEXT_PUBLIC_BASE_PATH)
+console.log('Header - basePath:', basePath)
 
 const navLinks = [
   { label: "关于", href: "#about" },
