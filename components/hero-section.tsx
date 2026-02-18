@@ -1,5 +1,7 @@
 import { ArrowDown } from "lucide-react"
 
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
+
 export function HeroSection() {
   return (
     <section className="relative flex min-h-screen flex-col items-center justify-center px-6 text-center overflow-hidden">
@@ -15,7 +17,7 @@ export function HeroSection() {
           className="mb-6"
         >
           <img
-            src="/logo.png"
+            src={`${basePath}/logo.png`}
             alt="Ruanm Studio Logo"
             className="h-20 w-auto mx-auto"
           />
