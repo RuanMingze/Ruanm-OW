@@ -3,11 +3,7 @@
 import { useState, useEffect } from "react"
 import { Menu, X, Search, X as CloseIcon, LogIn, User } from "lucide-react"
 import { usePathname } from 'next/navigation'
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = 'https://pyywrxrmtehucmkpqkdi.supabase.co'
-const supabaseKey = 'sb_publishable_Ztie93n2pi48h_rAIuviyA_ftjAIDuj'
-const supabase = createClient(supabaseUrl, supabaseKey)
+import supabase from '@/lib/supabase'
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
 console.log('Header - NEXT_PUBLIC_BASE_PATH:', process.env.NEXT_PUBLIC_BASE_PATH)
 console.log('Header - basePath:', basePath)
@@ -18,6 +14,8 @@ const navLinks = [
   { label: "服务", href: "#services" },
   { label: "产品", href: "/products" },
   { label: "联系", href: "#contact" },
+  { label: "Issue", href: "/issue" },
+  { label: "管理", href: "/admin", adminOnly: true },
 ]
 
 export function Header() {
@@ -35,7 +33,26 @@ export function Header() {
 
   const checkSession = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession()
+      // 首先尝试从本地存储读取用户信息
+      const userProfileStr = localStorage.getItem('userProfile')
+      if (userProfileStr) {
+        const userProfileData = JSON.parse(userProfileStr)
+        // 创建一个模拟的用户对象
+        const mockUser = {
+          id: userProfileData.id || 'local-user',
+          email: userProfileData.email,
+          user_metadata: {
+            username: userProfileData.name
+          }
+        }
+        setUser(mockUser)
+        return
+      }
+      
+      // 如果本地存储没有，尝试从Supabase Auth获取会话
+      const { data } = await supabase.auth.getSession()
+      const session = data?.session
+      
       if (session?.user) {
         setUser(session.user)
       }
@@ -59,22 +76,34 @@ export function Header() {
         </a>
 
         <nav className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex items-center gap-8 hidden md:flex" aria-label="Main navigation">
-          {navLinks.map((link) => {
-            if (link.label === "产品" && pathname === '/products') return null
-            const href = link.href.startsWith('#') 
-              ? link.href
-              : `${basePath}${link.href}`
-            return (
-              <a
-                key={link.href}
-                href={href}
-                className="text-sm text-muted-foreground hover:text-primary transition-colors duration-300"
-              >
-                {link.label}
-              </a>
-            )
-          })}
-        </nav>
+            {navLinks.map((link: any) => {
+              if (link.adminOnly && user?.user_metadata?.username !== 'Ruanm') return null
+              if (link.label === "产品" && pathname === `${basePath}/products`) return null
+              if (link.label === "Issue" && pathname === `${basePath}/issue`) return null
+              if (link.label === "管理" && pathname === `${basePath}/admin`) return null
+              
+              let href
+              if (link.href.startsWith('#')) {
+                if (pathname === `${basePath}/products`) {
+                  href = `${basePath}/${link.href}`
+                } else {
+                  href = link.href
+                }
+              } else {
+                href = `${basePath}${link.href}`
+              }
+              
+              return (
+                <a
+                  key={link.href}
+                  href={href}
+                  className="text-sm text-muted-foreground hover:text-primary transition-colors duration-300"
+                >
+                  {link.label}
+                </a>
+              )
+            })}
+          </nav>
 
         <div className="hidden md:flex items-center gap-4">
           <button
@@ -155,11 +184,22 @@ export function Header() {
       {mobileOpen && (
         <div className="md:hidden border-t border-border bg-background/95 backdrop-blur-md">
           <nav className="flex flex-col px-6 py-6 gap-4" aria-label="Mobile navigation">
-            {navLinks.map((link) => {
-              if (link.label === "产品" && pathname === '/products') return null
-              const href = link.href.startsWith('#') 
-                ? link.href
-                : `${basePath}${link.href}`
+            {navLinks.map((link: any) => {
+              if (link.adminOnly && user?.user_metadata?.username !== 'Ruanm') return null
+              if (link.label === "产品" && pathname === `${basePath}/products`) return null
+              if (link.label === "Issue" && pathname === `${basePath}/issue`) return null
+              if (link.label === "管理" && pathname === `${basePath}/admin`) return null
+              let href
+              if (link.href.startsWith('#')) {
+                if (pathname === `${basePath}/products`) {
+                  href = `${basePath}/${link.href}`
+                } else {
+                  href = link.href
+                }
+              } else {
+                href = `${basePath}${link.href}`
+              }
+              
               return (
                 <a
                   key={link.href}

@@ -1,8 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Mail, User, Briefcase, Send, CheckCircle, AlertCircle, Home } from 'lucide-react'
+import supabase from '@/lib/supabase'
+
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
 
 const products = [
   { id: 'paperstation', name: 'PaperStation 浏览器' },
@@ -14,6 +17,8 @@ const products = [
 
 export default function BetaPage() {
   const router = useRouter()
+  const [user, setUser] = useState<any>(null)
+  const [userProfile, setUserProfile] = useState<any>(null)
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -26,6 +31,91 @@ export default function BetaPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [errors, setErrors] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    checkSession()
+  }, [])
+
+  const checkSession = async () => {
+    try {
+      const userProfileStr = localStorage.getItem('userProfile')
+      console.log('localStorage中的userProfile字符串:', userProfileStr)
+      
+      if (userProfileStr) {
+        const userProfileData = JSON.parse(userProfileStr)
+        setUserProfile(userProfileData)
+        
+        const mockUser = {
+          id: userProfileData.id || 'local-user',
+          email: userProfileData.email,
+          user_metadata: {
+            username: userProfileData.name,
+            userId: userProfileData.id
+          }
+        }
+        setUser(mockUser)
+        
+        setFormData(prev => ({
+          ...prev,
+          name: userProfileData.name || '',
+          email: userProfileData.email || ''
+        }))
+        console.log('从localStorage加载userProfile成功:', userProfileData)
+        return
+      }
+
+      console.log('localStorage中没有userProfile，尝试从session获取')
+
+      const { data } = await supabase.auth.getSession()
+      const session = data?.session
+      
+      console.log('session:', session)
+      
+      if (session?.user) {
+        setUser(session.user)
+        console.log('获取到session.user:', session.user)
+        
+        try {
+          const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('*')
+            .eq('email', session.user.email)
+            .single()
+          
+          console.log('从user_profiles查询结果:', profile)
+          
+          if (profile) {
+            setUserProfile(profile)
+            localStorage.setItem('userProfile', JSON.stringify(profile))
+            setFormData(prev => ({
+              ...prev,
+              name: profile.name || '',
+              email: profile.email || ''
+            }))
+            console.log('成功加载user_profile并保存到localStorage')
+          } else {
+            console.warn('未找到user_profile记录')
+            setFormData(prev => ({
+              ...prev,
+              name: session.user.user_metadata?.username || session.user.user_metadata?.full_name || '',
+              email: session.user.email || ''
+            }))
+          }
+        } catch (profileError) {
+          console.warn('从user_profiles读取失败:', profileError)
+          setFormData(prev => ({
+            ...prev,
+            name: session.user.user_metadata?.username || session.user.user_metadata?.full_name || '',
+            email: session.user.email || ''
+          }))
+        }
+      } else {
+        console.log('未找到session')
+      }
+    } catch (err) {
+      console.error('获取用户信息失败:', err)
+    }
+  }
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
@@ -52,7 +142,7 @@ export default function BetaPage() {
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!validateForm()) return
@@ -60,20 +150,72 @@ export default function BetaPage() {
     setIsSubmitting(true)
     setSubmitStatus('idle')
 
-    setTimeout(() => {
+    try {
+      if (!userProfile && !user) {
+        throw new Error('请先登录')
+      }
+
+      console.log('userProfile:', userProfile)
+      console.log('user:', user)
+      console.log('userProfile?.id:', userProfile?.id)
+      console.log('user?.user_metadata?.userId:', user?.user_metadata?.userId)
+      console.log('user?.id:', user?.id)
+
+      // 确保获取正确的整数类型用户ID
+      let userId: number | undefined
+      
+      if (userProfile?.id) {
+        userId = Number(userProfile.id)
+      } else if (user?.email) {
+        // 如果没有userProfile，尝试从数据库查询
+        try {
+          const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('id')
+            .eq('email', user.email)
+            .single()
+          
+          if (profile?.id) {
+            userId = Number(profile.id)
+            console.log('从数据库查询到的userId:', userId)
+          }
+        } catch (err) {
+          console.warn('从数据库查询用户ID失败:', err)
+        }
+      }
+      
+      console.log('最终userId:', userId)
+      
+      if (!userId || isNaN(userId)) {
+        throw new Error('无法获取用户ID，请先登录')
+      }
+
+      const applicationData = {
+        product: formData.product,
+        reason: formData.experience + (formData.notes ? '\n\n其他备注：' + formData.notes : ''),
+        status: 'pending',
+        created_at: new Date().toISOString()
+      }
+
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({
+          beta_applications: applicationData
+        })
+        .eq('id', userId)
+
+      if (error) throw error
+
       setIsSubmitting(false)
       setSubmitStatus('success')
       
-      const applicationData = {
-        ...formData,
-        timestamp: Date.now(),
-      }
-      
-      localStorage.setItem('betaApplication', JSON.stringify(applicationData))
-      
       console.log('Beta测试申请已提交:', formData)
-      console.log('模拟发送邮件到: xmt20160124@outlook.com')
-    }, 2000)
+    } catch (err: any) {
+      console.error('提交申请失败:', err)
+      setIsSubmitting(false)
+      setSubmitStatus('error')
+      alert('提交申请失败：' + (err.message || '未知错误'))
+    }
   }
 
   const handleChange = (field: string, value: string) => {
@@ -132,7 +274,7 @@ export default function BetaPage() {
                   提交新的申请
                 </button>
                 <a
-                  href="/user"
+                  href={`${basePath}/user`}
                   className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg border border-border px-6 py-3 text-sm font-medium text-primary hover:bg-accent transition-all duration-300"
                 >
                   <Home size={18} />

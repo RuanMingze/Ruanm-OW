@@ -7,6 +7,8 @@
     "typescript-config/consistent-casing": "off",
     "button-type": "off",
     "axe/name-role-value": "off",
-    "axe/structure": "off"
+    "axe/structure": "off",
+    "axe/forms": "off",
+    "axe/parsing": "off"
   }
 }

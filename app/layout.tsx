@@ -1,6 +1,9 @@
 import type { Metadata, Viewport } from 'next'
 import { ThemeProvider } from '@/components/theme-provider'
 import { AosProvider } from '@/components/aos-provider'
+import { KonamiCodeEasterEgg } from '@/components/konami-code-easter-egg'
+import { CookieConsent } from '@/components/cookie-consent'
+import { VisitMonitor } from '@/components/visit-monitor'
 
 import './globals.css'
 
@@ -30,6 +33,9 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
           <AosProvider>{children}</AosProvider>
         </ThemeProvider>
+        <KonamiCodeEasterEgg />
+        <CookieConsent />
+        <VisitMonitor />
       </body>
     </html>
   )

@@ -4,12 +4,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { ExternalLink, Download, X } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
-import { createClient } from '@supabase/supabase-js'
+import supabase from '@/lib/supabase'
 import { pinyin } from 'pinyin-pro'
-
-const supabaseUrl = 'https://pyywrxrmtehucmkpqkdi.supabase.co'
-const supabaseKey = 'sb_publishable_Ztie93n2pi48h_rAIuviyA_ftjAIDuj'
-const supabase = createClient(supabaseUrl, supabaseKey)
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
 
 const productMap: Record<number, string> = {
   1: 'paperstation',
@@ -77,7 +74,7 @@ function ProductCard({ product, idx, onClick, betaApplication }: { product: any;
           <img 
             src={product.icon} 
             alt={product.title}
-            className="w-20 h-20 object-contain"
+            className="w-20 h-20 object-cover rounded-2xl"
           />
         </div>
         <h3 className="text-2xl font-bold text-primary mb-3">
@@ -140,7 +137,7 @@ function ProductModal({ product, onClose, betaApplication }: { product: any; onC
           <img 
             src={product.icon} 
             alt={product.title}
-            className="w-24 h-24 object-contain"
+            className="w-24 h-24 object-cover rounded-2xl"
           />
         </div>
         
@@ -193,6 +190,7 @@ export function ProductsSection() {
   const [localSearchQuery, setLocalSearchQuery] = useState(initialSearchQuery)
   const [user, setUser] = useState<any>(null)
   const [betaApplication, setBetaApplication] = useState<any>(null)
+  const [betaQualified, setBetaQualified] = useState(false)
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -212,28 +210,23 @@ export function ProductsSection() {
     }
   }
 
-  const checkBetaQualification = () => {
+  const checkBetaQualification = async () => {
     try {
-      const applicationStr = localStorage.getItem('betaApplication')
-      if (applicationStr) {
-        const application = JSON.parse(applicationStr)
-        const now = Date.now()
-        const threeHours = 3 * 60 * 60 * 1000
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (session?.user?.email) {
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('has_beta_access')
+          .eq('email', session.user.email)
+          .single()
         
-        if (now - application.timestamp >= threeHours) {
-          setBetaApplication(application)
-        }
-      } else {
-        const qualified = localStorage.getItem('betaQualified')
-        if (qualified === 'true') {
-          const applicationStr = localStorage.getItem('betaApplication')
-          if (applicationStr) {
-            setBetaApplication(JSON.parse(applicationStr))
-          }
+        if (profile?.has_beta_access) {
+          setBetaQualified(true)
         }
       }
     } catch (err) {
-      console.error('检查Beta资格失败:', err)
+      console.error('获取用户信息失败:', err)
     }
   }
 

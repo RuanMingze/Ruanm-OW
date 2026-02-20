@@ -3,11 +3,10 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Mail, Lock, User, UserPlus, LogIn } from 'lucide-react'
-import { createClient } from '@supabase/supabase-js'
+import bcrypt from 'bcryptjs'
+import supabase from '@/lib/supabase'
 
-const supabaseUrl = 'https://pyywrxrmtehucmkpqkdi.supabase.co'
-const supabaseKey = 'sb_publishable_Ztie93n2pi48h_rAIuviyA_ftjAIDuj'
-const supabase = createClient(supabaseUrl, supabaseKey)
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -28,7 +27,7 @@ export default function RegisterPage() {
   const checkSession = async () => {
     const { data: { session } } = await supabase.auth.getSession()
     if (session?.user) {
-      router.push('/user')
+      router.push(`${basePath}/user`)
     }
   }
 
@@ -64,7 +63,21 @@ export default function RegisterPage() {
 
       if (error) throw error
 
-      setSuccess('注册成功！请检查邮箱并点击验证链接，然后再登录')
+      const saltRounds = 10
+      const hashedPassword = await bcrypt.hash(password.trim(), saltRounds)
+
+      const { error: insertError } = await supabase
+        .from('user_profiles')
+        .insert({
+          name: username.trim(),
+          email: email.trim(),
+          hashed_password: hashedPassword,
+          has_beta_access: false,
+        })
+
+      if (insertError) throw insertError
+
+      setSuccess('注册成功！请登录')
       setUsername('')
       setFullName('')
       setEmail('')
@@ -221,7 +234,7 @@ export default function RegisterPage() {
 
             <div className="text-center">
               <a
-                href="/login"
+                href={`${basePath}/login`}
                 className="text-sm text-primary hover:text-primary/80 transition-colors inline-flex items-center gap-1"
               >
                 <LogIn size={14} />
@@ -233,11 +246,11 @@ export default function RegisterPage() {
           <div className="mt-6 text-center text-sm text-muted-foreground">
             <p>注册即表示您同意我们的</p>
             <div className="flex items-center justify-center gap-2 mt-1">
-              <a href="#" className="text-primary hover:text-primary/80 transition-colors">
+              <a href={`${basePath}/terms`} className="text-primary hover:text-primary/80 transition-colors">
                 服务条款
               </a>
               <span>和</span>
-              <a href="#" className="text-primary hover:text-primary/80 transition-colors">
+              <a href={`${basePath}/privacy`} className="text-primary hover:text-primary/80 transition-colors">
                 隐私政策
               </a>
             </div>

@@ -3,6 +3,8 @@
 import { useState, useRef } from 'react'
 import { ChevronDown, ChevronRight, BookOpen, Layers, Search, X, Home } from 'lucide-react'
 
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
+
 interface DocumentItem {
   id: string
   title: string
@@ -756,7 +758,7 @@ PaperStation 浏览器的界面由以下部分组成：
             <h1 className="text-3xl font-bold">产品文档中心</h1>
           </div>
           <a
-            href="/"
+            href={`${basePath}/`}
             className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-card hover:bg-muted transition-colors"
           >
             <Home className="w-5 h-5" />

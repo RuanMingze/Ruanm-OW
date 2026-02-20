@@ -3,11 +3,10 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Mail, Lock, Github, User, LogOut } from 'lucide-react'
-import { createClient } from '@supabase/supabase-js'
+import bcrypt from 'bcryptjs'
+import supabase from '@/lib/supabase'
 
-const supabaseUrl = 'https://pyywrxrmtehucmkpqkdi.supabase.co'
-const supabaseKey = 'sb_publishable_Ztie93n2pi48h_rAIuviyA_ftjAIDuj'
-const supabase = createClient(supabaseUrl, supabaseKey)
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
 
 export default function LoginPage() {
   const router = useRouter()
@@ -16,8 +15,9 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
-  const [user, setUser] = useState<any>(null)
   const [mounted, setMounted] = useState(false)
+  const [loginSuccess, setLoginSuccess] = useState(false)
+  const [userProfile, setUserProfile] = useState<any>(null)
 
   useEffect(() => {
     setMounted(true)
@@ -26,9 +26,6 @@ export default function LoginPage() {
 
   const checkSession = async () => {
     const { data: { session } } = await supabase.auth.getSession()
-    if (session?.user) {
-      router.push('/user')
-    }
   }
 
   const handleEmailLogin = async (e: React.FormEvent) => {
@@ -44,14 +41,110 @@ export default function LoginPage() {
     setIsSubmitting(true)
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password: password.trim(),
-      })
+      let userProfileData = null
+      let authSuccess = false
 
-      if (error) throw error
+      try {
+        console.log('登录 - 准备查询user_profiles，邮箱:', email.trim())
+        
+        const supabaseUrl = 'https://pyywrxrmtehucmkpqkdi.supabase.co'
+        const supabaseKey = 'sb_publishable_Ztie93n2pi48h_rAIuviyA_ftjAIDuj'
+        const requestUrl = `${supabaseUrl}/rest/v1/user_profiles?select=*&email=eq.${encodeURIComponent(email.trim())}`
+        
+        console.log('登录 - 请求URL:', requestUrl)
+        console.log('登录 - 请求头:', {
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Content-Type': 'application/json'
+        })
+        
+        const response = await fetch(requestUrl, {
+          method: 'GET',
+          headers: {
+            'apikey': supabaseKey,
+            'Authorization': `Bearer ${supabaseKey}`,
+            'Content-Type': 'application/json'
+          }
+        })
+        
+        console.log('登录 - 响应状态:', response.status)
+        console.log('登录 - 响应头:', Object.fromEntries(response.headers.entries()))
+        
+        const profile = await response.json()
+        console.log('登录 - 从user_profiles读取profile:', profile)
+        
+        if (profile && profile.length > 0) {
+          const passwordMatch = await bcrypt.compare(password.trim(), profile[0].hashed_password)
+          console.log('登录 - 密码匹配结果:', passwordMatch)
+          if (passwordMatch) {
+            userProfileData = profile[0]
+            console.log('登录 - 设置userProfileData:', userProfileData)
+          }
+        }
+      } catch (profileError) {
+        console.warn('从user_profiles读取失败:', profileError)
+      }
 
-      router.push('/user')
+      if (!userProfileData) {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password: password.trim(),
+        })
+
+        if (error) throw error
+        
+        authSuccess = true
+        console.log('登录 - Supabase auth登录成功')
+      }
+
+      if (userProfileData || authSuccess) {
+        if (!userProfileData && authSuccess) {
+          try {
+            console.log('登录 - auth成功后，尝试从user_profiles读取profile')
+            
+            const supabaseUrl = 'https://pyywrxrmtehucmkpqkdi.supabase.co'
+            const supabaseKey = 'sb_publishable_Ztie93n2pi48h_rAIuviyA_ftjAIDuj'
+            const requestUrl = `${supabaseUrl}/rest/v1/user_profiles?select=*&email=eq.${encodeURIComponent(email.trim())}`
+            
+            console.log('登录 - auth成功后请求URL:', requestUrl)
+            
+            const response = await fetch(requestUrl, {
+              method: 'GET',
+              headers: {
+                'apikey': supabaseKey,
+                'Authorization': `Bearer ${supabaseKey}`,
+                'Content-Type': 'application/json'
+              }
+            })
+            
+            console.log('登录 - auth成功后响应状态:', response.status)
+            
+            const profile = await response.json()
+            console.log('登录 - auth成功后读取到的profile:', profile)
+            
+            if (profile && profile.length > 0) {
+              userProfileData = profile[0]
+            }
+          } catch (profileError) {
+            console.warn('读取user_profiles失败:', profileError)
+          }
+        }
+
+        console.log('登录 - 最终userProfileData:', userProfileData)
+        
+        if (userProfileData) {
+          console.log('登录 - 存储userProfile到localStorage:', userProfileData)
+          localStorage.setItem('userProfile', JSON.stringify(userProfileData))
+          console.log('登录 - userProfile已存储到localStorage')
+        } else {
+          console.warn('登录 - userProfileData为空，无法存储到localStorage')
+        }
+
+        setUserProfile(userProfileData)
+        setLoginSuccess(true)
+      } else {
+        setError('邮箱或密码错误')
+      }
     } catch (err: any) {
       console.error('登录失败:', err)
       if (err.message?.includes('Invalid login credentials')) {
@@ -72,7 +165,7 @@ export default function LoginPage() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'github',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${window.location.origin}${basePath}/auth/callback`,
         },
       })
 
@@ -80,22 +173,6 @@ export default function LoginPage() {
     } catch (err: any) {
       console.error('GitHub登录失败:', err)
       setError('GitHub登录失败：' + (err.message || '未知错误'))
-    }
-  }
-
-  const handleLogout = async () => {
-    setError('')
-    setSuccess('')
-
-    try {
-      const { error } = await supabase.auth.signOut()
-      if (error) throw error
-
-      setUser(null)
-      setSuccess('退出登录成功！')
-    } catch (err: any) {
-      console.error('退出失败:', err)
-      setError('退出失败：' + (err.message || '未知错误'))
     }
   }
 
@@ -116,153 +193,128 @@ export default function LoginPage() {
             </p>
           </div>
 
-          {user ? (
-            <div className="space-y-6">
-              <div className="flex flex-col items-center gap-4 p-6 bg-muted/50 rounded-lg">
-                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                  <User size={32} className="text-primary" />
-                </div>
-                <div className="text-center">
-                  <p className="text-sm text-muted-foreground mb-1">用户名</p>
-                  <p className="font-medium text-primary">
-                    {user.email?.split('@')[0] || '未知用户'}
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    {user.email || '未绑定邮箱'}
-                  </p>
-                </div>
-              </div>
+          {loginSuccess ? (
+                <div className="space-y-6">
+                  <div className="text-center py-8">
+                    <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-green-500/10 flex items-center justify-center">
+                      <svg className="w-10 h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <h2 className="text-2xl font-bold text-primary mb-2">
+                      登录成功！
+                    </h2>
+                    <p className="text-muted-foreground">
+                      欢迎回来，{userProfile?.name || email.split('@')[0]}
+                    </p>
+                  </div>
 
-              <button
-                onClick={handleLogout}
-                disabled={isSubmitting}
-                className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-destructive px-6 py-3 text-sm font-medium text-destructive-foreground hover:bg-destructive/90 transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed"
-              >
-                <LogOut size={18} />
-                退出登录
-              </button>
-            </div>
-          ) : (
-            <form onSubmit={handleEmailLogin} className="space-y-6">
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-primary mb-2">
-                  邮箱
-                </label>
-                <div className="relative">
-                  <Mail 
-                    size={18} 
-                    className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground"
-                  />
-                  <input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="请输入邮箱"
-                    required
-                    className="w-full pl-12 pr-4 py-3 rounded-lg border border-border bg-background text-primary placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-colors"
-                  />
+                  <button
+                    onClick={() => router.push(`${basePath}/user`)}
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-all duration-300"
+                  >
+                    <User size={18} />
+                    去用户中心
+                  </button>
                 </div>
-              </div>
+              ) : (
+                <form onSubmit={handleEmailLogin} className="space-y-6">
+                  <div>
+                    <label htmlFor="email" className="block text-sm font-medium text-primary mb-2">
+                      邮箱
+                    </label>
+                    <div className="relative">
+                      <Mail 
+                        size={18} 
+                        className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground"
+                      />
+                      <input
+                        id="email"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="请输入邮箱"
+                        required
+                        className="w-full pl-12 pr-4 py-3 rounded-lg border border-border bg-background text-primary placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-colors"
+                      />
+                    </div>
+                  </div>
 
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-primary mb-2">
-                  密码
-                </label>
-                <div className="relative">
-                  <Lock 
-                    size={18} 
-                    className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground"
-                  />
-                  <input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="请输入密码"
-                    required
-                    className="w-full pl-12 pr-4 py-3 rounded-lg border border-border bg-background text-primary placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-colors"
-                  />
-                </div>
-              </div>
+                  <div>
+                    <label htmlFor="password" className="block text-sm font-medium text-primary mb-2">
+                      密码
+                    </label>
+                    <div className="relative">
+                      <Lock 
+                        size={18} 
+                        className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground"
+                      />
+                      <input
+                        id="password"
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="请输入密码"
+                        required
+                        className="w-full pl-12 pr-4 py-3 rounded-lg border border-border bg-background text-primary placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-colors"
+                      />
+                    </div>
+                  </div>
 
-              {error && (
-                <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
-                  <p className="text-sm text-destructive text-center">
-                    {error}
-                  </p>
-                </div>
+                  {error && (
+                    <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+                      <p className="text-sm text-destructive text-center">
+                        {error}
+                      </p>
+                    </div>
+                  )}
+
+                  {success && (
+                    <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
+                      <p className="text-sm text-green-600 text-center">
+                        {success}
+                      </p>
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"></div>
+                        登录中...
+                      </>
+                    ) : (
+                      <>
+                        <LogOut size={18} className="rotate-180" />
+                        登录账号
+                      </>
+                    )}
+                  </button>
+
+                  <div className="text-center">
+                    <a
+                      href={`${basePath}/register`}
+                      className="text-sm text-primary hover:text-primary/80 transition-colors"
+                    >
+                      还没有账号？立即注册
+                    </a>
+                  </div>
+                </form>
               )}
-
-              {success && (
-                <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
-                  <p className="text-sm text-green-600 text-center">
-                    {success}
-                  </p>
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed"
-              >
-                {isSubmitting ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"></div>
-                    登录中...
-                  </>
-                ) : (
-                  <>
-                    <LogOut size={18} className="rotate-180" />
-                    登录账号
-                  </>
-                )}
-              </button>
-
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-border"></div>
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-card px-2 text-muted-foreground">或</span>
-                </div>
-              </div>
-
-              <div className="relative group">
-                <button
-                  type="button"
-                  disabled
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-muted px-6 py-3 text-sm font-medium text-muted-foreground cursor-not-allowed transition-all duration-300"
-                >
-                  <Github size={18} />
-                  使用GitHub登录
-                </button>
-                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-64 bg-popover text-popover-foreground px-3 py-2 rounded-lg text-sm shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
-                  <p>由于技术原因，此功能暂时不可用</p>
-                </div>
-              </div>
-
-              <div className="text-center">
-                <a
-                  href="/register"
-                  className="text-sm text-primary hover:text-primary/80 transition-colors"
-                >
-                  还没有账号？立即注册
-                </a>
-              </div>
-            </form>
-          )}
         </div>
 
         <div className="mt-6 text-center text-sm text-muted-foreground">
           <p>登录即表示您同意我们的</p>
           <div className="flex items-center justify-center gap-2 mt-1">
-            <a href="#" className="text-primary hover:text-primary/80 transition-colors">
+            <a href={`${basePath}/terms`} className="text-primary hover:text-primary/80 transition-colors">
               服务条款
             </a>
             <span>和</span>
-            <a href="#" className="text-primary hover:text-primary/80 transition-colors">
+            <a href={`${basePath}/privacy`} className="text-primary hover:text-primary/80 transition-colors">
               隐私政策
             </a>
           </div>
