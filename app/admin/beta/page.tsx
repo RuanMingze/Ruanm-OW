@@ -47,7 +47,7 @@ export default function BetaReviewPage() {
         setUserProfile(userProfileData)
         
         if (userProfileData.name !== 'Ruanm') {
-          router.push(`${basePath}/403`)
+          router.push('/403')
           return
         }
 
@@ -66,7 +66,7 @@ export default function BetaReviewPage() {
       const session = data?.session
       
       if (!session?.user) {
-        router.push(`${basePath}/403`)
+        router.push('/403')
         return
       }
 
@@ -79,7 +79,7 @@ export default function BetaReviewPage() {
         .single()
 
       if (profile?.name !== 'Ruanm') {
-        router.push(`${basePath}/403`)
+        router.push('/403')
         return
       }
 
@@ -209,7 +209,7 @@ export default function BetaReviewPage() {
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         <div className="mb-8">
           <button
-            onClick={() => router.push(`${basePath}/admin`)}
+            onClick={() => router.push('/admin')}
             className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors mb-4"
           >
             <ArrowLeft size={20} />

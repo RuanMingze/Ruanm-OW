@@ -56,7 +56,7 @@ export default function AdminIssuePage() {
         setUserProfile(userProfileData)
         
         if (userProfileData.name !== 'Ruanm') {
-          router.push(`${basePath}/403`)
+          router.push('/403')
           return
         }
 
@@ -75,7 +75,7 @@ export default function AdminIssuePage() {
       const session = data?.session
       
       if (!session?.user) {
-        router.push(`${basePath}/403`)
+        router.push('/403')
         return
       }
 
@@ -88,7 +88,7 @@ export default function AdminIssuePage() {
         .single()
 
       if (profile?.name !== 'Ruanm') {
-        router.push(`${basePath}/403`)
+        router.push('/403')
         return
       }
 
@@ -97,7 +97,7 @@ export default function AdminIssuePage() {
       await loadIssues()
     } catch (err) {
       console.error('获取用户信息失败:', err)
-      router.push(`${basePath}/403`)
+      router.push('/403')
     } finally {
       setLoading(false)
     }
@@ -205,7 +205,7 @@ export default function AdminIssuePage() {
         <div className="mb-8">
           <div className="flex items-center gap-4 mb-4">
             <button
-              onClick={() => router.push(`${basePath}/admin`)}
+              onClick={() => router.push('/admin')}
               className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors"
             >
               <ArrowLeft size={20} />

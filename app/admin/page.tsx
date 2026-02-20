@@ -43,7 +43,7 @@ export default function AdminPage() {
         setUserProfile(userProfileData)
         
         if (userProfileData.name !== 'Ruanm') {
-          router.push(`${basePath}/403`)
+          router.push('/403')
           return
         }
 
@@ -62,7 +62,7 @@ export default function AdminPage() {
       const session = data?.session
       
       if (!session?.user) {
-        router.push(`${basePath}/403`)
+        router.push('/403')
         return
       }
 
@@ -75,7 +75,7 @@ export default function AdminPage() {
         .single()
 
       if (profile?.name !== 'Ruanm') {
-        router.push(`${basePath}/403`)
+        router.push('/403')
         return
       }
 
@@ -175,21 +175,21 @@ export default function AdminPage() {
         <div className="mb-8">
           <div className="flex items-center gap-4 mb-4">
             <button
-              onClick={() => router.push(`${basePath}/`)}
+              onClick={() => router.push('/')}
               className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors"
             >
               <ArrowLeft size={20} />
               返回主页
             </button>
             <button
-              onClick={() => router.push(`${basePath}/admin/beta`)}
+              onClick={() => router.push('/admin/beta')}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors font-medium"
             >
               <Award size={20} />
               Beta授权
             </button>
             <button
-              onClick={() => router.push(`${basePath}/admin/issue`)}
+              onClick={() => router.push('/admin/issue')}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors font-medium"
             >
               <MessageSquare size={20} />
