@@ -27,7 +27,7 @@ export default function RegisterPage() {
   const checkSession = async () => {
     const { data: { session } } = await supabase.auth.getSession()
     if (session?.user) {
-      router.push(`${basePath}/user`)
+      router.push('/user')
     }
   }
 

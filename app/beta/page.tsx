@@ -274,7 +274,7 @@ export default function BetaPage() {
                   提交新的申请
                 </button>
                 <a
-                  href={`${basePath}/user`}
+                  href="/user"
                   className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg border border-border px-6 py-3 text-sm font-medium text-primary hover:bg-accent transition-all duration-300"
                 >
                   <Home size={18} />

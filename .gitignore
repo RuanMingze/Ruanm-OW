@@ -12,3 +12,6 @@ log.txt
 
 # Output directory
 out/
+
+# lock file
+pnpm-lock.yaml

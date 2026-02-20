@@ -210,7 +210,7 @@ export default function LoginPage() {
                   </div>
 
                   <button
-                    onClick={() => router.push(`${basePath}/user`)}
+                    onClick={() => router.push('/user')}
                     className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-all duration-300"
                   >
                     <User size={18} />
