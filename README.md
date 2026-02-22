@@ -77,12 +77,16 @@ pnpm lint
 
 ## 部署
 
-本项目使用 GitHub Actions 自动部署到 GitHub Pages。
+本项目使用 Cloudflare Pages 自动部署。
 
 部署流程：
 1. 推送代码到 `main` 分支
-2. GitHub Actions 自动触发构建
-3. 构建完成后自动部署到 GitHub Pages
+2. Cloudflare Pages 自动触发构建
+3. 构建完成后自动部署到 Cloudflare Pages 全球网络
+
+### 访问链接
+- **Cloudflare Pages**: https://3e01b70.ruanm.pages.dev
+- **GitHub 仓库**: https://github.com/RuanMingze/Ruanm-OW
 
 ## 贡献
 

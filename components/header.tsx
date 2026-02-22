@@ -161,7 +161,7 @@ export function Header() {
             </a>
           )}
           <a
-            href="mailto:xmt20160124@outlook.com"
+            href={`${basePath}/feedback`}
             className="inline-flex items-center rounded-full border border-border px-5 py-2 text-sm text-primary hover:bg-accent transition-colors duration-300"
           >
             取得联系
@@ -276,7 +276,8 @@ export function Header() {
               <ThemeToggle />
             </div>
             <a
-              href="mailto:xmt20160124@outlook.com"
+              href={`${basePath}/feedback`}
+              onClick={() => setMobileOpen(false)}
               className="mt-2 inline-flex items-center justify-center rounded-full border border-border px-5 py-2.5 text-sm text-primary hover:bg-accent transition-colors"
             >
               取得联系

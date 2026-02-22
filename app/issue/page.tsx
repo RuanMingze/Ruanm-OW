@@ -7,6 +7,12 @@ import supabase from '@/lib/supabase'
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
 
+const isOfficialUser = (userName: string) => {
+  if (!userName) return false
+  const lowerName = userName.toLowerCase()
+  return lowerName === 'ruanm' || lowerName === 'ruanmingze'
+}
+
 interface Issue {
   qa_id: string
   question: string
@@ -79,7 +85,7 @@ function IssueCard({ issue, user, handleAnswerIssue, categories }: { issue: Issu
               <span className="font-medium text-primary">
                 {issue.asker_name}
               </span>
-              {issue.asker_name === 'Ruanm' && (
+              {isOfficialUser(issue.asker_name || '') && (
                 <span className="px-2 py-1 rounded-full bg-green-500/10 text-xs text-green-500">
                   官方
                 </span>
@@ -114,7 +120,7 @@ function IssueCard({ issue, user, handleAnswerIssue, categories }: { issue: Issu
                   <span className="font-medium text-primary">
                     {issue.answerer_name || '官方回复'}
                   </span>
-                  {issue.answerer_name === 'Ruanm' && (
+                  {isOfficialUser(issue.answerer_name || '') && (
                     <span className="px-2 py-1 rounded-full bg-green-500/10 text-xs text-green-500">
                       官方
                     </span>
@@ -245,11 +251,26 @@ export default function IssuePage() {
 
       if (error) throw error
 
-      const issuesWithNames = data?.map(issue => ({
-        ...issue,
-        asker_name: issue.asker_profiles?.name || '匿名用户',
-        answerer_name: issue.answerer_profiles?.name || null
-      })) || []
+      const issuesWithNames = data?.map(issue => {
+        let askerName = issue.asker_profiles?.name || '匿名用户'
+        let answererName = issue.answerer_profiles?.name || null
+        
+        // 如果当前用户就是发布者，使用当前用户的名字
+        if (user && issue.asker_id === user.id) {
+          askerName = user.name || '匿名用户'
+        }
+        
+        // 如果当前用户就是回答者，使用当前用户的名字
+        if (user && issue.answerer_id === user.id) {
+          answererName = user.name || '匿名用户'
+        }
+        
+        return {
+          ...issue,
+          asker_name: askerName,
+          answerer_name: answererName
+        }
+      }) || []
 
       setIssues(issuesWithNames)
     } catch (err) {

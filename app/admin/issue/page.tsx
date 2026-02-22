@@ -7,6 +7,12 @@ import supabase from '@/lib/supabase'
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
 
+const isOfficialUser = (userName: string) => {
+  if (!userName) return false
+  const lowerName = userName.toLowerCase()
+  return lowerName === 'ruanm' || lowerName === 'ruanmingze'
+}
+
 interface Issue {
   qa_id: string
   question: string
@@ -55,7 +61,7 @@ export default function AdminIssuePage() {
         const userProfileData = JSON.parse(userProfileStr)
         setUserProfile(userProfileData)
         
-        if (userProfileData.name !== 'Ruanm') {
+        if (!isOfficialUser(userProfileData.name)) {
           router.push('/403')
           return
         }
@@ -87,7 +93,7 @@ export default function AdminIssuePage() {
         .eq('email', session.user.email)
         .single()
 
-      if (profile?.name !== 'Ruanm') {
+      if (!isOfficialUser(profile?.name)) {
         router.push('/403')
         return
       }
@@ -285,7 +291,7 @@ export default function AdminIssuePage() {
                           </div>
                           <div>
                             <div className="font-medium text-primary">{issue.asker_name}</div>
-                            {issue.asker_name === 'Ruanm' && (
+                            {isOfficialUser(issue.asker_name || '') && (
                               <span className="inline-block mt-1 px-2 py-1 rounded-full bg-green-500/10 text-xs text-green-500">
                                 官方
                               </span>

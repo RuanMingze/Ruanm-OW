@@ -7,6 +7,12 @@ import supabase from '@/lib/supabase'
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
 
+const isOfficialUser = (userName: string) => {
+  if (!userName) return false
+  const lowerName = userName.toLowerCase()
+  return lowerName === 'ruanm' || lowerName === 'ruanmingze'
+}
+
 interface UserProfile {
   id: number
   name: string
@@ -46,7 +52,7 @@ export default function BetaReviewPage() {
         const userProfileData = JSON.parse(userProfileStr)
         setUserProfile(userProfileData)
         
-        if (userProfileData.name !== 'Ruanm') {
+        if (!isOfficialUser(userProfileData.name)) {
           router.push('/403')
           return
         }
@@ -78,7 +84,7 @@ export default function BetaReviewPage() {
         .eq('email', session.user.email)
         .single()
 
-      if (profile?.name !== 'Ruanm') {
+      if (!isOfficialUser(profile?.name)) {
         router.push('/403')
         return
       }

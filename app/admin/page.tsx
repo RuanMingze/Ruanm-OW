@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { User, Mail, Shield, AlertTriangle, Home, Trash2, Search, X, CheckCircle, Clock, ArrowLeft, Award, MessageSquare } from 'lucide-react'
+import { User, Mail, Shield, AlertTriangle, Home, Trash2, Search, X, CheckCircle, Clock, ArrowLeft, Award, MessageSquare, UserX } from 'lucide-react'
 import supabase from '@/lib/supabase'
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
@@ -42,7 +42,7 @@ export default function AdminPage() {
         const userProfileData = JSON.parse(userProfileStr)
         setUserProfile(userProfileData)
         
-        if (userProfileData.name !== 'Ruanm') {
+        if (!isOfficialUser(userProfileData.name)) {
           router.push('/403')
           return
         }
@@ -74,7 +74,7 @@ export default function AdminPage() {
         .eq('email', session.user.email)
         .single()
 
-      if (profile?.name !== 'Ruanm') {
+      if (!isOfficialUser(profile?.name)) {
         router.push('/403')
         return
       }
@@ -149,6 +149,74 @@ export default function AdminPage() {
     setDeleteError('')
   }
 
+  const isOfficialUser = (userName: string) => {
+    if (!userName) return false
+    const lowerName = userName.toLowerCase()
+    return lowerName === 'ruanm' || lowerName === 'ruanmingze'
+  }
+
+  const isFakeOfficialUser = (userName: string) => {
+    if (!userName) return false
+    
+    const lowerName = userName.toLowerCase()
+    const ruanmIndex = lowerName.indexOf('ruanm')
+    
+    if (ruanmIndex === -1) return false
+    
+    // 计算Ruanm以外的字符数
+    const beforeRuanm = userName.substring(0, ruanmIndex)
+    const afterRuanm = userName.substring(ruanmIndex + 5)
+    const otherChars = beforeRuanm.length + afterRuanm.length
+    
+    // Ruanm以外的字符不超过2个，且不是官方用户
+    return otherChars <= 2 && !isOfficialUser(userName)
+  }
+
+  const hasFakeOfficialUsers = users.some(user => isFakeOfficialUser(user.name))
+
+  const handleDeleteAllFakeUsers = async () => {
+    try {
+      const fakeUsers = users.filter(user => isFakeOfficialUser(user.name))
+      
+      if (fakeUsers.length === 0) {
+        alert('没有仿官方用户需要清除')
+        return
+      }
+
+      if (!confirm(`确定要清除 ${fakeUsers.length} 个仿官方用户吗？\n\n此操作不可撤销！`)) {
+        return
+      }
+
+      for (const fakeUser of fakeUsers) {
+        const { error: profileError } = await supabase
+          .from('user_profiles')
+          .delete()
+          .eq('id', fakeUser.id)
+
+        if (profileError) {
+          console.error(`删除用户 ${fakeUser.name} 失败:`, profileError)
+          continue
+        }
+
+        const { data: { users: authUsers } } = await supabase.auth.admin.listUsers()
+        const authUser = authUsers?.find(u => u.email === fakeUser.email)
+        
+        if (authUser) {
+          const { error: authError } = await supabase.auth.admin.deleteUser(authUser.id)
+          if (authError) {
+            console.error(`删除认证用户 ${fakeUser.email} 失败:`, authError)
+          }
+        }
+      }
+
+      alert(`已成功清除 ${fakeUsers.length} 个仿官方用户`)
+      await loadUsers()
+    } catch (err: any) {
+      console.error('清除仿官方用户失败:', err)
+      alert('清除失败：' + (err.message || '未知错误'))
+    }
+  }
+
   const filteredUsers = users.filter(user => 
     user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.email.toLowerCase().includes(searchQuery.toLowerCase())
@@ -195,6 +263,15 @@ export default function AdminPage() {
               <MessageSquare size={20} />
               Issue管理
             </button>
+            {hasFakeOfficialUsers && (
+              <button
+                onClick={handleDeleteAllFakeUsers}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-500/10 text-orange-500 hover:bg-orange-500/20 transition-colors font-medium"
+              >
+                <UserX size={20} />
+                清除仿官方用户
+              </button>
+            )}
           </div>
           <h1 className="text-4xl font-bold text-primary mb-2">用户管理</h1>
           <p className="text-muted-foreground">管理系统中的所有用户</p>
@@ -250,11 +327,18 @@ export default function AdminPage() {
                           )}
                           <div>
                             <div className="font-medium text-primary">{user.name}</div>
-                            {user.name === 'Ruanm' && (
-                              <span className="inline-block mt-1 px-2 py-1 rounded-full bg-green-500/10 text-xs text-green-500">
-                                官方
-                              </span>
-                            )}
+                            <div className="flex gap-2 mt-1">
+                              {isOfficialUser(user.name) && (
+                                <span className="inline-block px-2 py-1 rounded-full bg-green-500/10 text-xs text-green-500">
+                                  官方
+                                </span>
+                              )}
+                              {isFakeOfficialUser(user.name) && (
+                                <span className="inline-block px-2 py-1 rounded-full bg-orange-500/10 text-xs text-orange-500">
+                                  仿官方
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </td>
@@ -279,10 +363,14 @@ export default function AdminPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        {user.name !== 'Ruanm' && (
+                        {!isOfficialUser(user.name) && (
                           <button
                             onClick={() => handleDeleteUser(user.id)}
-                            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors text-sm font-medium"
+                            className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm font-medium ${
+                              isFakeOfficialUser(user.name)
+                                ? 'bg-orange-500/20 text-orange-500 hover:bg-orange-500/30'
+                                : 'bg-red-500/10 text-red-500 hover:bg-red-500/20'
+                            }`}
                           >
                             <Trash2 size={16} />
                             注销
@@ -310,6 +398,14 @@ export default function AdminPage() {
               <p className="text-muted-foreground mb-6">
                 您即将注销用户 <span className="font-medium text-primary">{users.find(u => u.id === deletingUserId)?.name}</span>。
               </p>
+              {isFakeOfficialUser(users.find(u => u.id === deletingUserId)?.name || '') && (
+                <div className="mb-6 p-4 bg-orange-500/10 border border-orange-500/20 rounded-lg">
+                  <p className="text-orange-500 flex items-center gap-2">
+                    <AlertTriangle size={16} />
+                    警告：该用户名包含"Ruanm"且其他字符不超过2个，疑似仿冒官方用户，建议立即注销！
+                  </p>
+                </div>
+              )}
               <p className="text-red-500 mb-6">
                 此操作不可撤销！该用户的所有数据将被永久删除。
               </p>
