@@ -95,7 +95,7 @@ export function Header() {
               
               let href
               if (link.href.startsWith('#')) {
-                if (pathname === `${basePath}/products` || pathname === `${basePath}/feedback`) {
+                if (pathname === `${basePath}/products` || pathname === `${basePath}/feedback` || pathname === `${basePath}/issue`) {
                   href = `${basePath}/${link.href}`
                 } else {
                   href = link.href
@@ -217,7 +217,7 @@ export function Header() {
               if (link.label === "Issue" && pathname === `${basePath}/issue`) return null
               let href
               if (link.href.startsWith('#')) {
-                if (pathname === `${basePath}/products`) {
+                if (pathname === `${basePath}/products` || pathname === `${basePath}/feedback` || pathname === `${basePath}/issue`) {
                   href = `${basePath}/${link.href}`
                 } else {
                   href = link.href

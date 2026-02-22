@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { MessageSquare, Plus, Send, Filter, Search, User, Clock, Tag, CheckCircle, AlertCircle, Home } from 'lucide-react'
 import supabase from '@/lib/supabase'
+import { Header } from '@/components/header'
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
 
@@ -360,25 +361,27 @@ export default function IssuePage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto px-6 py-32">
-        <div className="mb-8 flex items-start justify-between">
-          <div>
-            <h1 className="text-4xl font-bold text-primary mb-2">
-              Issue 中心
-            </h1>
-            <p className="text-muted-foreground">
-              提问、回答问题、改进产品建议
-            </p>
+    <>
+      <Header />
+      <div className="min-h-screen bg-background">
+        <div className="max-w-7xl mx-auto px-6 py-32">
+          <div className="mb-8 flex items-start justify-between">
+            <div>
+              <h1 className="text-4xl font-bold text-primary mb-2">
+                Issue 中心
+              </h1>
+              <p className="text-muted-foreground">
+                提问、回答问题、改进产品建议
+              </p>
+            </div>
+            <a
+              href={`${basePath}/`}
+              className="inline-flex items-center gap-2 rounded-lg border border-border px-6 py-2 text-sm font-medium text-primary hover:bg-accent transition-all duration-300"
+            >
+              <Home size={18} />
+              返回主页
+            </a>
           </div>
-          <a
-            href={`${basePath}/`}
-            className="inline-flex items-center gap-2 rounded-lg border border-border px-6 py-2 text-sm font-medium text-primary hover:bg-accent transition-all duration-300"
-          >
-            <Home size={18} />
-            返回主页
-          </a>
-        </div>
 
         <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex gap-4">
@@ -533,5 +536,6 @@ export default function IssuePage() {
         )}
       </div>
     </div>
+    </>
   )
 }
