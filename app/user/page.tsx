@@ -36,6 +36,13 @@ export default function UserCenterPage() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [betaApplicationStatus, setBetaApplicationStatus] = useState<'approved' | 'rejected' | null>(null)
   const [showBetaStatusModal, setShowBetaStatusModal] = useState(false)
+  const [showChangePassword, setShowChangePassword] = useState(false)
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [isChangingPassword, setIsChangingPassword] = useState(false)
+  const [changePasswordError, setChangePasswordError] = useState('')
+  const [changePasswordSuccess, setChangePasswordSuccess] = useState('')
 
   useEffect(() => {
     setMounted(true)
@@ -246,6 +253,102 @@ export default function UserCenterPage() {
     setSaveError('')
   }
 
+  const handleChangePassword = async () => {
+    setChangePasswordError('')
+    setChangePasswordSuccess('')
+
+    if (!currentPassword.trim()) {
+      setChangePasswordError('请输入当前密码')
+      return
+    }
+
+    if (!newPassword.trim()) {
+      setChangePasswordError('请输入新密码')
+      return
+    }
+
+    if (newPassword.length < 6) {
+      setChangePasswordError('新密码长度至少6位')
+      return
+    }
+
+    if (newPassword !== confirmPassword) {
+      setChangePasswordError('两次输入的新密码不一致')
+      return
+    }
+
+    if (currentPassword === newPassword) {
+      setChangePasswordError('新密码不能与当前密码相同')
+      return
+    }
+
+    setIsChangingPassword(true)
+
+    try {
+      const userProfileStr = localStorage.getItem('userProfile')
+      if (userProfileStr) {
+        const userProfileData = JSON.parse(userProfileStr)
+
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('hashed_password')
+          .eq('id', userProfileData.id)
+          .single()
+
+        if (!profile?.hashed_password) {
+          throw new Error('未找到用户密码信息')
+        }
+
+        const passwordMatch = await bcrypt.compare(currentPassword, profile.hashed_password)
+        if (!passwordMatch) {
+          throw new Error('当前密码不正确')
+        }
+
+        const saltRounds = 10
+        const hashedPassword = await bcrypt.hash(newPassword.trim(), saltRounds)
+
+        const { error: updateError } = await supabase
+          .from('user_profiles')
+          .update({ hashed_password: hashedPassword })
+          .eq('id', userProfileData.id)
+
+        if (updateError) throw updateError
+
+        const { error: authError } = await supabase.auth.updateUser({
+          password: newPassword.trim()
+        })
+
+        if (authError && authError.message !== 'Auth session missing!') {
+          console.warn('更新Supabase Auth密码失败:', authError)
+        }
+
+        setChangePasswordSuccess('密码修改成功！')
+        setCurrentPassword('')
+        setNewPassword('')
+        setConfirmPassword('')
+
+        setTimeout(() => {
+          setShowChangePassword(false)
+          setChangePasswordSuccess('')
+        }, 2000)
+      }
+    } catch (err: any) {
+      console.error('修改密码失败:', err)
+      setChangePasswordError('修改密码失败：' + (err.message || '未知错误'))
+    } finally {
+      setIsChangingPassword(false)
+    }
+  }
+
+  const handleCancelChangePassword = () => {
+    setShowChangePassword(false)
+    setCurrentPassword('')
+    setNewPassword('')
+    setConfirmPassword('')
+    setChangePasswordError('')
+    setChangePasswordSuccess('')
+  }
+
   const handleDeleteUser = async () => {
     setIsDeleting(true)
     setDeleteError('')
@@ -369,13 +472,22 @@ export default function UserCenterPage() {
                 {user?.email || '未绑定邮箱'}
               </p>
               {userProfile && (
-                <button
-                  onClick={handleEditClick}
-                  className="mt-4 inline-flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors"
-                >
-                  <Edit2 size={16} />
-                  编辑资料
-                </button>
+                <div className="mt-4 flex gap-4 justify-center">
+                  <button
+                    onClick={handleEditClick}
+                    className="inline-flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors"
+                  >
+                    <Edit2 size={16} />
+                    编辑资料
+                  </button>
+                  <button
+                    onClick={() => setShowChangePassword(true)}
+                    className="inline-flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors"
+                  >
+                    <Settings size={16} />
+                    修改密码
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -521,6 +633,101 @@ export default function UserCenterPage() {
           <p>© 2026 Ruanm Studio. 用户体验至上的好产品</p>
         </div>
       </div>
+
+      {showChangePassword && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-card border border-border rounded-2xl p-8 max-w-md w-full mx-4">
+            <h3 className="text-xl font-bold text-primary mb-4">
+              修改密码
+            </h3>
+
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="current-password" className="block text-sm font-medium text-primary mb-2">
+                  当前密码
+                </label>
+                <input
+                  id="current-password"
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="请输入当前密码"
+                  className="w-full px-4 py-3 rounded-lg border border-border bg-background text-primary placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-colors"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="new-password" className="block text-sm font-medium text-primary mb-2">
+                  新密码（至少6位）
+                </label>
+                <input
+                  id="new-password"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="请输入新密码"
+                  className="w-full px-4 py-3 rounded-lg border border-border bg-background text-primary placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-colors"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="confirm-password" className="block text-sm font-medium text-primary mb-2">
+                  确认新密码
+                </label>
+                <input
+                  id="confirm-password"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="请再次输入新密码"
+                  className="w-full px-4 py-3 rounded-lg border border-border bg-background text-primary placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-colors"
+                />
+              </div>
+
+              {changePasswordError && (
+                <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+                  <p className="text-sm text-destructive text-center">
+                    {changePasswordError}
+                  </p>
+                </div>
+              )}
+
+              {changePasswordSuccess && (
+                <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
+                  <p className="text-sm text-green-600 text-center">
+                    {changePasswordSuccess}
+                  </p>
+                </div>
+              )}
+
+              <div className="flex gap-4">
+                <button
+                  onClick={handleCancelChangePassword}
+                  disabled={isChangingPassword}
+                  className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg border border-border px-6 py-3 text-sm font-medium text-primary hover:bg-accent transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                  取消
+                </button>
+
+                <button
+                  onClick={handleChangePassword}
+                  disabled={isChangingPassword}
+                  className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                  {isChangingPassword ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"></div>
+                      修改中...
+                    </>
+                  ) : (
+                    '确认修改'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showLogoutConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">

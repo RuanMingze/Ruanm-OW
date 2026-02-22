@@ -84,7 +84,7 @@ export default function AdminPage() {
       await loadUsers()
     } catch (err) {
       console.error('获取用户信息失败:', err)
-      router.push(`${basePath}/403`)
+      router.push('/403')
     } finally {
       setLoading(false)
     }

@@ -209,13 +209,24 @@ export default function LoginPage() {
                     </p>
                   </div>
 
-                  <button
-                    onClick={() => router.push('/user')}
-                    className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-all duration-300"
-                  >
-                    <User size={18} />
-                    去用户中心
-                  </button>
+                  <div className="space-y-3">
+                    <button
+                      onClick={() => router.push('/user')}
+                      className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-all duration-300"
+                    >
+                      <User size={18} />
+                      去用户中心
+                    </button>
+                    <button
+                      onClick={() => router.push('/')}
+                      className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-border px-6 py-3 text-sm font-medium text-primary hover:bg-accent transition-all duration-300"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                      </svg>
+                      返回首页
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <form onSubmit={handleEmailLogin} className="space-y-6">

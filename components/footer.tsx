@@ -26,6 +26,7 @@ export function Footer() {
               { label: "服务", href: "#services" },
               { label: "产品", href: "/products" },
               { label: "联系", href: "#contact" },
+              { label: "反馈", href: "/feedback" },
               { label: "隐私政策", href: "/privacy" },
               { label: "服务条款", href: "/terms" },
             ].map((link) => {

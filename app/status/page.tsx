@@ -6,8 +6,6 @@ import { Footer } from "@/components/footer"
 import { Activity, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
-console.log('StatusPage - NEXT_PUBLIC_BASE_PATH:', process.env.NEXT_PUBLIC_BASE_PATH)
-console.log('StatusPage - basePath:', basePath)
 
 interface StatusItem {
   id: string
@@ -52,15 +50,12 @@ function StatusPage() {
 
   const loadStatuses = async () => {
     try {
-      console.log('StatusPage - 加载状态数据:', `${basePath}/statuses.json`)
-      const response = await fetch(`${basePath}/statuses.json`)
-      console.log('StatusPage - 响应状态:', response.status)
+      const response = await fetch('/statuses.json')
       if (response.ok) {
         const data = await response.json()
         setStatuses(data)
-        console.log('StatusPage - 状态数据加载成功:', data)
       } else {
-        console.error('StatusPage - 状态数据加载失败:', response.statusText)
+        console.error('状态数据加载失败:', response.statusText)
       }
     } catch (error) {
       console.error('获取状态失败:', error)

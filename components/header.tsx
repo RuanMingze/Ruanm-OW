@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { Menu, X, Search, X as CloseIcon, LogIn, User } from "lucide-react"
 import { usePathname } from 'next/navigation'
+import { ThemeToggle } from './theme-toggle'
 import supabase from '@/lib/supabase'
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
 console.log('Header - NEXT_PUBLIC_BASE_PATH:', process.env.NEXT_PUBLIC_BASE_PATH)
@@ -15,7 +16,6 @@ const navLinks = [
   { label: "产品", href: "/products" },
   { label: "联系", href: "#contact" },
   { label: "Issue", href: "/issue" },
-  { label: "管理", href: "/admin", adminOnly: true },
 ]
 
 export function Header() {
@@ -24,6 +24,7 @@ export function Header() {
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [user, setUser] = useState<any>(null)
+  const [userAvatar, setUserAvatar] = useState<string>('')
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -33,11 +34,9 @@ export function Header() {
 
   const checkSession = async () => {
     try {
-      // 首先尝试从本地存储读取用户信息
       const userProfileStr = localStorage.getItem('userProfile')
       if (userProfileStr) {
         const userProfileData = JSON.parse(userProfileStr)
-        // 创建一个模拟的用户对象
         const mockUser = {
           id: userProfileData.id || 'local-user',
           email: userProfileData.email,
@@ -46,15 +45,29 @@ export function Header() {
           }
         }
         setUser(mockUser)
+        setUserAvatar(userProfileData.avatar_url || '')
         return
       }
       
-      // 如果本地存储没有，尝试从Supabase Auth获取会话
       const { data } = await supabase.auth.getSession()
       const session = data?.session
       
       if (session?.user) {
         setUser(session.user)
+        
+        try {
+          const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('avatar_url')
+            .eq('email', session.user.email)
+            .single()
+          
+          if (profile?.avatar_url) {
+            setUserAvatar(profile.avatar_url)
+          }
+        } catch (err) {
+          console.warn('获取用户头像失败:', err)
+        }
       }
     } catch (err) {
       console.error('获取用户信息失败:', err)
@@ -77,14 +90,12 @@ export function Header() {
 
         <nav className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex items-center gap-8 hidden md:flex" aria-label="Main navigation">
             {navLinks.map((link: any) => {
-              if (link.adminOnly && user?.user_metadata?.username !== 'Ruanm') return null
               if (link.label === "产品" && pathname === `${basePath}/products`) return null
               if (link.label === "Issue" && pathname === `${basePath}/issue`) return null
-              if (link.label === "管理" && pathname === `${basePath}/admin`) return null
               
               let href
               if (link.href.startsWith('#')) {
-                if (pathname === `${basePath}/products`) {
+                if (pathname === `${basePath}/products` || pathname === `${basePath}/feedback`) {
                   href = `${basePath}/${link.href}`
                 } else {
                   href = link.href
@@ -113,14 +124,31 @@ export function Header() {
           >
             <Search size={18} />
           </button>
+          <ThemeToggle />
           {mounted && user ? (
             <a
               href={`${basePath}/user`}
-              className="flex items-center justify-center rounded-full border border-border px-4 py-2 text-sm text-primary hover:bg-accent transition-colors duration-300"
+              className="relative flex items-center justify-center w-10 h-10 rounded-full border border-border overflow-hidden hover:bg-accent transition-colors duration-300"
               aria-label="用户中心"
             >
-              <User size={16} />
-              {user.user_metadata?.username || user.email?.split('@')[0] || '用户'}
+              {userAvatar ? (
+                <img
+                  src={userAvatar}
+                  alt="用户头像"
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement
+                    target.style.display = 'none'
+                    const fallback = target.parentElement?.querySelector('.fallback-avatar')
+                    if (fallback) {
+                      (fallback as HTMLElement).style.display = 'flex'
+                    }
+                  }}
+                />
+              ) : null}
+              <div className={`fallback-avatar absolute inset-0 flex items-center justify-center bg-primary/10 ${userAvatar ? 'hidden' : 'flex'}`}>
+                <User size={18} className="text-primary" />
+              </div>
             </a>
           ) : (
             <a
@@ -185,10 +213,8 @@ export function Header() {
         <div className="md:hidden border-t border-border bg-background/95 backdrop-blur-md">
           <nav className="flex flex-col px-6 py-6 gap-4" aria-label="Mobile navigation">
             {navLinks.map((link: any) => {
-              if (link.adminOnly && user?.user_metadata?.username !== 'Ruanm') return null
               if (link.label === "产品" && pathname === `${basePath}/products`) return null
               if (link.label === "Issue" && pathname === `${basePath}/issue`) return null
-              if (link.label === "管理" && pathname === `${basePath}/admin`) return null
               let href
               if (link.href.startsWith('#')) {
                 if (pathname === `${basePath}/products`) {
@@ -215,10 +241,26 @@ export function Header() {
               <a
                 href={`${basePath}/user`}
                 onClick={() => setMobileOpen(false)}
-                className="mt-2 inline-flex items-center justify-center rounded-full border border-border px-5 py-2.5 text-sm text-primary hover:bg-accent transition-colors"
+                className="relative mt-2 inline-flex items-center justify-center w-10 h-10 rounded-full border border-border overflow-hidden hover:bg-accent transition-colors"
               >
-                <User size={18} />
-                {user.user_metadata?.username || user.email?.split('@')[0] || '用户'}
+                {userAvatar ? (
+                  <img
+                    src={userAvatar}
+                    alt="用户头像"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement
+                      target.style.display = 'none'
+                      const fallback = target.parentElement?.querySelector('.mobile-fallback-avatar')
+                      if (fallback) {
+                        (fallback as HTMLElement).style.display = 'flex'
+                      }
+                    }}
+                  />
+                ) : null}
+                <div className={`mobile-fallback-avatar absolute inset-0 flex items-center justify-center bg-primary/10 ${userAvatar ? 'hidden' : 'flex'}`}>
+                  <User size={18} className="text-primary" />
+                </div>
               </a>
             ) : (
               <a
@@ -230,6 +272,9 @@ export function Header() {
                 登录
               </a>
             )}
+            <div className="mt-2">
+              <ThemeToggle />
+            </div>
             <a
               href="mailto:xmt20160124@outlook.com"
               className="mt-2 inline-flex items-center justify-center rounded-full border border-border px-5 py-2.5 text-sm text-primary hover:bg-accent transition-colors"
