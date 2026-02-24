@@ -36,12 +36,58 @@ export default function OAuthAuthorizePage() {
 
   const checkSession = async () => {
     try {
+      console.log('授权 - 开始检查会话')
+      
+      // 先检查本地存储的用户资料
+      const userProfileStr = localStorage.getItem('userProfile')
+      console.log('授权 - 本地存储用户资料:', userProfileStr)
+      
+      if (userProfileStr) {
+        try {
+          const userProfileData = JSON.parse(userProfileStr)
+          console.log('授权 - 解析用户资料成功:', userProfileData)
+          setUser(userProfileData)
+          
+          // 获取客户端应用信息
+          const { data: appData } = await supabase
+            .from('oauth_applications')
+            .select('*')
+            .eq('client_id', clientId)
+            .single()
+
+          if (!appData) {
+            setError('无效的客户端ID')
+            setLoading(false)
+            return
+          }
+
+          // 验证重定向URI
+          if (appData.redirect_uri !== redirectUri) {
+            setError('无效的重定向URI')
+            setLoading(false)
+            return
+          }
+
+          setClientInfo(appData)
+          setLoading(false)
+          console.log('授权 - 会话检查成功，使用本地存储的用户资料')
+          return
+        } catch (parseError) {
+          console.error('授权 - 解析用户资料失败:', parseError)
+          // 解析失败，继续检查Supabase会话
+        }
+      }
+      
+      // 如果本地存储没有，检查Supabase会话
+      console.log('授权 - 检查Supabase会话')
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) {
+        console.log('授权 - 未找到会话，跳转到登录页')
         router.push('/login?redirect=' + encodeURIComponent(window.location.href))
         return
       }
       setUser(session.user)
+      console.log('授权 - Supabase会话检查成功')
 
       // 获取客户端应用信息
       const { data: appData } = await supabase
