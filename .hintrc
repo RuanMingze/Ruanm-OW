@@ -9,6 +9,14 @@
     "axe/name-role-value": "off",
     "axe/structure": "off",
     "axe/forms": "off",
-    "axe/parsing": "off"
+    "axe/parsing": "off",
+    "compat-api/css": [
+      "default",
+      {
+        "ignore": [
+          "-webkit-app-region"
+        ]
+      }
+    ]
   }
 }

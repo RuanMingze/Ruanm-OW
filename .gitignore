@@ -15,3 +15,6 @@ out/
 
 # lock file
 pnpm-lock.yaml
+
+# Desktop folder (Electron app)
+Desktop/
