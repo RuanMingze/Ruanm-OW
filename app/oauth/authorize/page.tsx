@@ -1,28 +1,38 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { CheckCircle, AlertCircle } from 'lucide-react'
 import supabase from '@/lib/supabase'
 
 export default function OAuthAuthorizePage() {
   const router = useRouter()
-  const searchParams = useSearchParams()
   const [loading, setLoading] = useState(true)
   const [authorizing, setAuthorizing] = useState(false)
   const [error, setError] = useState('')
   const [clientInfo, setClientInfo] = useState<any>(null)
   const [user, setUser] = useState<any>(null)
-
-  const clientId = searchParams.get('client_id')
-  const redirectUri = searchParams.get('redirect_uri')
-  const responseType = searchParams.get('response_type') || 'code'
-  const scope = searchParams.get('scope') || 'read write'
-  const state = searchParams.get('state')
+  const [clientId, setClientId] = useState<string | null>(null)
+  const [redirectUri, setRedirectUri] = useState<string | null>(null)
+  const [responseType, setResponseType] = useState<string>('code')
+  const [scope, setScope] = useState<string>('read write')
+  const [state, setState] = useState<string | null>(null)
 
   useEffect(() => {
-    checkSession()
+    // 在客户端获取查询参数
+    const searchParams = new URLSearchParams(window.location.search)
+    setClientId(searchParams.get('client_id'))
+    setRedirectUri(searchParams.get('redirect_uri'))
+    setResponseType(searchParams.get('response_type') || 'code')
+    setScope(searchParams.get('scope') || 'read write')
+    setState(searchParams.get('state'))
   }, [])
+
+  useEffect(() => {
+    if (clientId) {
+      checkSession()
+    }
+  }, [clientId])
 
   const checkSession = async () => {
     try {
