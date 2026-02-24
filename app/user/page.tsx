@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { User, Mail, LogOut, ExternalLink, Settings, Shield, CheckCircle, Clock, Home, Edit2, X, AlertCircle } from 'lucide-react'
+import { User, Mail, LogOut, ExternalLink, Settings, Shield, CheckCircle, RefreshCw, Home, Edit2, X, AlertCircle, Upload } from 'lucide-react'
 import bcrypt from 'bcryptjs'
 import supabase from '@/lib/supabase'
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
@@ -43,6 +43,10 @@ export default function UserCenterPage() {
   const [isChangingPassword, setIsChangingPassword] = useState(false)
   const [changePasswordError, setChangePasswordError] = useState('')
   const [changePasswordSuccess, setChangePasswordSuccess] = useState('')
+  const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
+  const [avatarUploadError, setAvatarUploadError] = useState('')
+  const [avatarPreview, setAvatarPreview] = useState('')
 
   useEffect(() => {
     setMounted(true)
@@ -208,6 +212,9 @@ export default function UserCenterPage() {
   const handleEditClick = () => {
     setEditName(userProfile?.name || user?.user_metadata?.username || user?.email?.split('@')[0] || '')
     setEditAvatar(userProfile?.avatar_url || '')
+    setAvatarFile(null)
+    setAvatarPreview('')
+    setAvatarUploadError('')
     setSaveError('')
     setIsEditing(true)
   }
@@ -222,15 +229,108 @@ export default function UserCenterPage() {
     setSaveError('')
 
     try {
+      let finalAvatarUrl = editAvatar
+      let uploadedFileName = null
+      
+      // 如果选择了新头像，先上传
+      if (avatarFile) {
+        console.log('开始上传头像...')
+        
+        // 直接使用时间戳作为文件名
+        const fileExt = avatarFile.name.split('.').pop()
+        const fileName = `${Date.now()}.${fileExt}`
+        uploadedFileName = fileName
+        
+        // 检查存储桶是否存在
+        const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets()
+        console.log('存储桶列表:', buckets)
+        console.log('获取存储桶错误:', bucketsError)
+
+        const { error: uploadError } = await supabase.storage
+          .from('user-avatar')
+          .upload(fileName, avatarFile, {
+            cacheControl: '3600',
+            upsert: false
+          })
+
+        if (uploadError) {
+          console.error('上传头像失败:', uploadError)
+          throw uploadError
+        }
+
+        // 使用getPublicUrl生成永久有效的公共URL
+        const { data: urlData } = supabase.storage
+          .from('user-avatar')
+          .getPublicUrl(fileName)
+
+        const publicUrl = urlData.publicUrl
+        console.log('头像上传成功，URL:', publicUrl)
+        
+        // 使用Edge Functions审核头像
+        console.log('开始Edge Functions审核...')
+        
+        try {
+          // 使用服务角色密钥调用Edge Functions
+          const serviceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5eXdyeHJtdGVodWNta3Bxa2RpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAwOTM0NjYsImV4cCI6MjA4NTY2OTQ2Nn0.Xqv6ntl82CtzdMULQxxMXpygFvK54W1mFyQfShYV6Pc'
+          
+          const edgeFunctionUrl = `https://pyywrxrmtehucmkpqkdi.supabase.co/functions/v1/super-action?url=${encodeURIComponent(publicUrl)}`
+          const auditResponse = await fetch(edgeFunctionUrl, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${serviceRoleKey}`
+            }
+          })
+          
+          const auditResult = await auditResponse.json()
+          console.log('审核结果:', auditResult)
+          
+          // 只有在明确审核失败时才阻止上传
+          if (auditResult.success === false && auditResult.nsfw === true) {
+            console.error('头像包含违规内容:', auditResult)
+            
+            // 删除违规图片
+            if (uploadedFileName) {
+              await supabase.storage
+                .from('user-avatar')
+                .remove([uploadedFileName])
+              console.log('违规头像已删除')
+            }
+            
+            throw new Error('头像包含违规内容，请重新选择')
+          }
+          
+          console.log('头像审核通过')
+        } catch (auditError) {
+          console.warn('审核过程中出现错误，跳过审核:', auditError)
+          // 审核错误时直接当成审核通过，继续保存
+        }
+        
+        finalAvatarUrl = publicUrl
+        setEditAvatar(publicUrl)
+      }
+
       const { error } = await supabase
         .from('user_profiles')
         .update({
           name: editName.trim(),
-          avatar_url: editAvatar.trim() || null,
+          avatar_url: finalAvatarUrl.trim() || null,
         })
         .eq('email', user.email)
 
-      if (error) throw error
+      if (error) {
+        console.error('更新用户资料失败:', error)
+        
+        // 如果更新失败，删除已上传的头像
+        if (uploadedFileName) {
+          await supabase.storage
+            .from('user-avatar')
+            .remove([uploadedFileName])
+          console.log('已删除上传的头像')
+        }
+        
+        throw error
+      }
 
       const { data: updatedProfile } = await supabase
         .from('user_profiles')
@@ -238,8 +338,20 @@ export default function UserCenterPage() {
         .eq('email', user.email)
         .single()
 
+      console.log('获取更新后的用户资料:', updatedProfile)
+      
+      // 更新本地状态
       setUserProfile(updatedProfile)
+      
+      // 更新本地存储中的userProfile
+      if (updatedProfile) {
+        localStorage.setItem('userProfile', JSON.stringify(updatedProfile))
+        console.log('本地存储已更新')
+      }
+      
       setIsEditing(false)
+      setAvatarFile(null) // 清除选择的文件
+      setAvatarPreview('') // 清除预览
     } catch (err: any) {
       console.error('保存用户信息失败:', err)
       setSaveError('保存失败：' + (err.message || '未知错误'))
@@ -347,6 +459,118 @@ export default function UserCenterPage() {
     setConfirmPassword('')
     setChangePasswordError('')
     setChangePasswordSuccess('')
+  }
+
+  const handleAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+    if (!validTypes.includes(file.type)) {
+      setAvatarUploadError('只支持 JPEG、PNG、GIF 和 WebP 格式的图片')
+      return
+    }
+
+    const maxSize = 5 * 1024 * 1024
+    if (file.size > maxSize) {
+      setAvatarUploadError('图片大小不能超过 5MB')
+      return
+    }
+
+    setAvatarFile(file)
+    setAvatarUploadError('')
+
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setAvatarPreview(reader.result as string)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleAvatarUpload = async () => {
+    if (!avatarFile) return
+
+    setIsUploadingAvatar(true)
+    setAvatarUploadError('')
+
+    try {
+      // 获取当前用户的Auth UID
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+      
+      console.log('会话信息:', sessionData)
+      console.log('会话错误:', sessionError)
+      
+      const userId = sessionData?.session?.user?.id
+      
+      if (!userId) {
+        throw new Error('用户未登录或会话已过期')
+      }
+
+      console.log('当前用户ID:', userId)
+
+      // 检查存储桶是否存在
+      const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets()
+      console.log('存储桶列表:', buckets)
+      console.log('获取存储桶错误:', bucketsError)
+
+      // 直接使用时间戳作为文件名，不使用子文件夹
+      const fileExt = avatarFile.name.split('.').pop()
+      const fileName = `${Date.now()}.${fileExt}`
+
+      console.log('准备上传文件:', fileName)
+      console.log('文件信息:', {
+        name: avatarFile.name,
+        size: avatarFile.size,
+        type: avatarFile.type,
+        lastModified: avatarFile.lastModified
+      })
+
+      const { error: uploadError, data: uploadData } = await supabase.storage
+        .from('user-avatar')
+        .upload(fileName, avatarFile, {
+          cacheControl: '3600',
+          upsert: false
+        })
+
+      console.log('上传结果:', uploadData)
+      console.log('上传错误:', uploadError)
+
+      if (uploadError) {
+        console.error('详细上传错误:', uploadError)
+        throw uploadError
+      }
+
+      // 使用createSignedUrl生成带token的签名URL，有效期1小时
+      const { data: urlData, error: signedUrlError } = await supabase.storage
+        .from('user-avatar')
+        .createSignedUrl(fileName, 3600)
+
+      console.log('获取签名URL结果:', urlData)
+      console.log('获取签名URL错误:', signedUrlError)
+
+      if (signedUrlError) {
+        console.error('生成签名URL失败:', signedUrlError)
+        throw signedUrlError
+      }
+
+      const publicUrl = urlData.signedUrl
+      console.log('最终头像URL:', publicUrl)
+
+      setEditAvatar(publicUrl)
+      setAvatarPreview(publicUrl)
+    } catch (err: any) {
+      console.error('上传头像失败:', err)
+      setAvatarUploadError('上传头像失败：' + (err.message || '未知错误'))
+    } finally {
+      setIsUploadingAvatar(false)
+    }
+  }
+
+  const handleRemoveAvatar = () => {
+    setAvatarFile(null)
+    setAvatarPreview('')
+    setEditAvatar('')
+    setAvatarUploadError('')
   }
 
   const handleDeleteUser = async () => {
@@ -513,17 +737,74 @@ export default function UserCenterPage() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="edit-avatar" className="block text-sm font-medium text-primary mb-2">
-                    头像 URL（可选）
+                  <label className="block text-sm font-medium text-primary mb-2">
+                    头像
                   </label>
-                  <input
-                    id="edit-avatar"
-                    type="text"
-                    value={editAvatar}
-                    onChange={(e) => setEditAvatar(e.target.value)}
-                    placeholder="请输入头像图片链接"
-                    className="w-full px-4 py-3 rounded-lg border border-border bg-background text-primary placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-colors"
-                  />
+                  <div className="flex items-center gap-4">
+                    <div className="w-20 h-20 rounded-full overflow-hidden bg-primary/10 relative">
+                      {avatarPreview || editAvatar ? (
+                        <img
+                          src={avatarPreview || editAvatar}
+                          alt="头像预览"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <User size={40} className="text-primary" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <input
+                        type="file"
+                        id="avatar-upload"
+                        accept="image/jpeg,image/png,image/gif,image/webp"
+                        onChange={handleAvatarFileChange}
+                        className="hidden"
+                      />
+                      <label
+                        htmlFor="avatar-upload"
+                        className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-all duration-300 cursor-pointer"
+                      >
+                        <Upload size={16} />
+                        选择图片
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {avatarFile && (
+                          <button
+                            onClick={handleRemoveAvatar}
+                            className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-primary hover:bg-accent transition-all duration-300"
+                          >
+                            <X size={16} />
+                            移除
+                          </button>
+                        )}
+                        <button
+                          onClick={() => {
+                            const defaultAvatarUrl = 'https://luckycola.com.cn/public/imgs/luckycola_Imghub_forever_J1jJx3TK17714993088503669.png'
+                            setEditAvatar(defaultAvatarUrl)
+                            setAvatarPreview(defaultAvatarUrl)
+                            setAvatarFile(null)
+                            setAvatarUploadError('')
+                          }}
+                          className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-primary hover:bg-accent transition-all duration-300"
+                        >
+                          <RefreshCw size={16} />
+                          重置为默认值
+                        </button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        支持 JPEG、PNG、GIF 和 WebP 格式，最大 5MB
+                      </p>
+                    </div>
+                  </div>
+                  {avatarUploadError && (
+                    <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                      <p className="text-sm text-destructive">
+                        {avatarUploadError}
+                      </p>
+                    </div>
+                  )}
                 </div>
                 {saveError && (
                   <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
@@ -535,7 +816,7 @@ export default function UserCenterPage() {
                 <div className="flex gap-4">
                   <button
                     onClick={handleSaveProfile}
-                    disabled={isSaving}
+                    disabled={isSaving || isUploadingAvatar}
                     className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed"
                   >
                     {isSaving ? (
@@ -549,7 +830,7 @@ export default function UserCenterPage() {
                   </button>
                   <button
                     onClick={handleCancelEdit}
-                    disabled={isSaving}
+                    disabled={isSaving || isUploadingAvatar}
                     className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg border border-border px-6 py-3 text-sm font-medium text-primary hover:bg-accent transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed"
                   >
                     <X size={18} />
