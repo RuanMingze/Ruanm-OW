@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Mail, Lock, Github, User, LogOut } from 'lucide-react'
 import bcrypt from 'bcryptjs'
 import supabase from '@/lib/supabase'
@@ -10,6 +10,7 @@ const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
 
 export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -18,11 +19,33 @@ export default function LoginPage() {
   const [mounted, setMounted] = useState(false)
   const [loginSuccess, setLoginSuccess] = useState(false)
   const [userProfile, setUserProfile] = useState<any>(null)
+  
+  // 获取重定向地址
+  const redirectUrl = searchParams.get('redirect')
 
   useEffect(() => {
     setMounted(true)
     checkSession()
   }, [])
+  
+  // 登录成功后自动重定向
+  useEffect(() => {
+    if (loginSuccess && redirectUrl) {
+      // 延迟一小段时间，让用户看到登录成功的消息
+      setTimeout(() => {
+        try {
+          // 解码重定向URL
+          const decodedRedirectUrl = decodeURIComponent(redirectUrl)
+          console.log('登录成功，自动重定向到:', decodedRedirectUrl)
+          window.location.href = decodedRedirectUrl
+        } catch (err) {
+          console.error('重定向失败:', err)
+          // 如果重定向失败，默认去用户中心
+          router.push('/user')
+        }
+      }, 1000)
+    }
+  }, [loginSuccess, redirectUrl, router])
 
   const checkSession = async () => {
     const { data: { session } } = await supabase.auth.getSession()
