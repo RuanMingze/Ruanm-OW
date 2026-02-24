@@ -1,16 +1,16 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { Mail, Lock, Github, User, LogOut } from 'lucide-react'
 import bcrypt from 'bcryptjs'
 import supabase from '@/lib/supabase'
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
 
+
 export default function LoginPage() {
   const router = useRouter()
-  const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -19,9 +19,13 @@ export default function LoginPage() {
   const [mounted, setMounted] = useState(false)
   const [loginSuccess, setLoginSuccess] = useState(false)
   const [userProfile, setUserProfile] = useState<any>(null)
+  const [redirectUrl, setRedirectUrl] = useState<string | null>(null)
   
-  // 获取重定向地址
-  const redirectUrl = searchParams.get('redirect')
+  useEffect(() => {
+    // 在客户端获取重定向地址
+    const searchParams = new URLSearchParams(window.location.search)
+    setRedirectUrl(searchParams.get('redirect'))
+  }, [])
 
   useEffect(() => {
     setMounted(true)
