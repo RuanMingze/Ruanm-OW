@@ -5,11 +5,13 @@
   "scripts": {
     "start": "next start",
     "dev": "next dev --turbo",
-    "build": "next build",
+    "build": "npm run build",
+    "pages:build": "npm run build && npx @cloudflare/next-on-pages",
     "lint": "next lint",
     "convert-favicon": "node scripts/convert-favicon.js"
   },
   "dependencies": {
+    "@cloudflare/next-on-pages": "^1.13.0",
     "@hookform/resolvers": "^3.9.1",
     "@radix-ui/react-accordion": "1.2.2",
     "@radix-ui/react-alert-dialog": "1.1.4",
