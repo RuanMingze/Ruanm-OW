@@ -17,6 +17,8 @@ export default function OAuthAuthorizePage() {
   const [responseType, setResponseType] = useState<string>('code')
   const [scope, setScope] = useState<string>('read write')
   const [state, setState] = useState<string | null>(null)
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false)
+  const [finalRedirectUrl, setFinalRedirectUrl] = useState<string>('')
 
   useEffect(() => {
     // 在客户端获取查询参数
@@ -282,7 +284,15 @@ export default function OAuthAuthorizePage() {
       }
       
       console.log('授权 - 最终重定向URL:', finalRedirectUrl)
-      window.location.href = finalRedirectUrl
+      
+      // 设置成功消息和最终重定向URL
+      setFinalRedirectUrl(finalRedirectUrl)
+      setShowSuccessMessage(true)
+      
+      // 1秒后自动跳转
+      setTimeout(() => {
+        window.location.href = finalRedirectUrl
+      }, 1000)
     } catch (err: any) {
       console.error('授权失败:', err)
       setError('授权失败：' + (err.message || '未知错误'))
@@ -367,6 +377,38 @@ export default function OAuthAuthorizePage() {
             className="w-full bg-primary text-primary-foreground py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors"
           >
             返回首页
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (showSuccessMessage) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="max-w-md w-full bg-card rounded-lg p-8 shadow-lg">
+          <div className="flex justify-center mb-6">
+            <CheckCircle className="h-16 w-16 text-green-500" />
+          </div>
+          <h1 className="text-2xl font-bold text-center text-primary mb-2">授权成功</h1>
+          <p className="text-center text-muted-foreground mb-4">
+            授权已成功完成，将在 1 秒后自动跳转到授权的应用
+          </p>
+          <p className="text-center text-muted-foreground mb-6">
+            如果没有自动跳转，请
+            <a 
+              href={finalRedirectUrl} 
+              className="text-primary hover:underline ml-1"
+            >
+              点击这里
+            </a>
+            手动跳转
+          </p>
+          <button
+            onClick={() => window.location.href = finalRedirectUrl}
+            className="w-full bg-primary text-primary-foreground py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors"
+          >
+            立即跳转
           </button>
         </div>
       </div>
