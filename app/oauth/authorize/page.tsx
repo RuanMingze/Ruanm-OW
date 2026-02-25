@@ -74,11 +74,24 @@ export default function OAuthAuthorizePage() {
             requestRedirectUri: redirectUri
           })
           
-          if (appData.redirect_uri !== redirectUri) {
+          // 支持完全匹配和前缀匹配
+          const isValidRedirectUri = redirectUri ? (
+            appData.redirect_uri === redirectUri ||
+            (appData.redirect_uri.endsWith('/') && redirectUri.startsWith(appData.redirect_uri)) ||
+            (!appData.redirect_uri.endsWith('/') && redirectUri.startsWith(appData.redirect_uri + '/')) ||
+            // 特别处理：如果应用只设置了协议（如ruanmow://），则任何该协议的URI都有效
+            (appData.redirect_uri.includes('://') && 
+             appData.redirect_uri.split('://')[1] === '' && 
+             redirectUri.startsWith(appData.redirect_uri))
+          ) : false
+          
+          if (!isValidRedirectUri) {
             setError('无效的重定向URI')
             setLoading(false)
             return
           }
+          
+          console.log('授权 - 重定向URI验证通过')
 
           setClientInfo(appData)
           setLoading(false)
@@ -120,11 +133,24 @@ export default function OAuthAuthorizePage() {
         requestRedirectUri: redirectUri
       })
       
-      if (appData.redirect_uri !== redirectUri) {
+      // 支持完全匹配和前缀匹配
+      const isValidRedirectUri = redirectUri ? (
+        appData.redirect_uri === redirectUri ||
+        (appData.redirect_uri.endsWith('/') && redirectUri.startsWith(appData.redirect_uri)) ||
+        (!appData.redirect_uri.endsWith('/') && redirectUri.startsWith(appData.redirect_uri + '/')) ||
+        // 特别处理：如果应用只设置了协议（如ruanmow://），则任何该协议的URI都有效
+        (appData.redirect_uri.includes('://') && 
+         appData.redirect_uri.split('://')[1] === '' && 
+         redirectUri.startsWith(appData.redirect_uri))
+      ) : false
+      
+      if (!isValidRedirectUri) {
         setError('无效的重定向URI')
         setLoading(false)
         return
       }
+      
+      console.log('授权 - 重定向URI验证通过')
 
       setClientInfo(appData)
       setLoading(false)
