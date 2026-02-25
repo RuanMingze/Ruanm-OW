@@ -27,14 +27,14 @@ export function CtaSection() {
 
         <div data-aos="fade-up" data-aos-delay="300" className="mt-12">
           <a
-            href="mailto:xmt20160124@outlook.com"
+            href="mailto:support@ruanmgjx.dpdns.org"
             className="inline-flex items-center gap-3 rounded-full bg-primary px-10 py-4 text-base font-medium text-primary-foreground hover:bg-primary/90 transition-all duration-300"
           >
             <Mail size={18} />
             {'发送邮件'}
           </a>
           <p className="mt-6 text-sm text-muted-foreground">
-            xmt20160124@outlook.com
+            support@ruanmgjx.dpdns.org
           </p>
         </div>
       </div>

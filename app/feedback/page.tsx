@@ -74,7 +74,7 @@ export default function FeedbackPage() {
     e.preventDefault()
     setIsSubmitting(true)
 
-    const email = 'xmt20160124@outlook.com'
+    const email = 'support@ruanmgjx.dpdns.org'
     const subject = encodeURIComponent(`[反馈] ${formData.subject}`)
     const body = encodeURIComponent(
       `姓名：${formData.name}\n` +
