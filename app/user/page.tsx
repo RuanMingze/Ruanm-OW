@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { User, Mail, LogOut, ExternalLink, Settings, Shield, CheckCircle, RefreshCw, Home, Edit2, X, AlertCircle, Upload } from 'lucide-react'
 import bcrypt from 'bcryptjs'
 import supabase from '@/lib/supabase'
+import { Header } from '@/components/header'
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
 
 const products: Record<string, string> = {
@@ -654,7 +655,9 @@ export default function UserCenterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background px-6 py-32">
+    <>
+      <Header />
+      <div className="min-h-screen bg-background px-6 py-32">
       <div className="mx-auto max-w-4xl">
         <div className="bg-card border border-border rounded-2xl p-8 shadow-lg">
           <div className="text-center mb-8">
@@ -1241,5 +1244,6 @@ export default function UserCenterPage() {
         </div>
       )}
     </div>
+    </>
   )
 }

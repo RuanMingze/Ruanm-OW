@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { CheckCircle, AlertCircle } from 'lucide-react'
 import supabase from '@/lib/supabase'
+import { Header } from '@/components/header'
 
 export default function OAuthAuthorizePage() {
   const router = useRouter()
@@ -416,7 +417,9 @@ export default function OAuthAuthorizePage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <>
+      <Header />
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="max-w-md w-full bg-card rounded-lg p-8 shadow-lg">
         <div className="text-center mb-6">
           <h1 className="text-2xl font-bold text-primary mb-2">授权访问</h1>
@@ -474,6 +477,7 @@ export default function OAuthAuthorizePage() {
           授权后，该应用将能够访问您的账户信息直到您撤销授权
         </p>
       </div>
-    </div>
+      </div>
+    </>
   )
 }

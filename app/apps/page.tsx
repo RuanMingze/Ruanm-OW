@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Trash2, Copy, ExternalLink, Shield, Key } from 'lucide-react'
 import supabase from '@/lib/supabase'
+import { Header } from '@/components/header'
 
 export default function AppsPage() {
   const router = useRouter()
@@ -291,7 +292,9 @@ export default function AppsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <>
+      <Header />
+      <div className="min-h-screen bg-background">
       <div className="container mx-auto py-8 px-4">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center justify-between mb-8">
@@ -526,6 +529,7 @@ export default function AppsPage() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </>
   )
 }

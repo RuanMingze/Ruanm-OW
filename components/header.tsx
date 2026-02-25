@@ -95,11 +95,8 @@ export function Header() {
               
               let href
               if (link.href.startsWith('#')) {
-                if (pathname === `${basePath}/products` || pathname === `${basePath}/feedback` || pathname === `${basePath}/issue`) {
-                  href = `${basePath}/${link.href}`
-                } else {
-                  href = link.href
-                }
+                // 锚点链接总是指向主页的锚点
+                href = `${basePath}/${link.href}`
               } else {
                 href = `${basePath}${link.href}`
               }
@@ -217,11 +214,8 @@ export function Header() {
               if (link.label === "Issue" && pathname === `${basePath}/issue`) return null
               let href
               if (link.href.startsWith('#')) {
-                if (pathname === `${basePath}/products` || pathname === `${basePath}/feedback` || pathname === `${basePath}/issue`) {
-                  href = `${basePath}/${link.href}`
-                } else {
-                  href = link.href
-                }
+                // 锚点链接总是指向主页的锚点
+                href = `${basePath}/${link.href}`
               } else {
                 href = `${basePath}${link.href}`
               }
