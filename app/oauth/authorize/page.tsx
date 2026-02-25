@@ -22,7 +22,14 @@ export default function OAuthAuthorizePage() {
     // 在客户端获取查询参数
     const searchParams = new URLSearchParams(window.location.search)
     setClientId(searchParams.get('client_id'))
-    setRedirectUri(searchParams.get('redirect_uri'))
+    // 解码重定向URI，因为它在传递时被编码了
+    const encodedRedirectUri = searchParams.get('redirect_uri')
+    const decodedRedirectUri = encodedRedirectUri ? decodeURIComponent(encodedRedirectUri) : null
+    setRedirectUri(decodedRedirectUri)
+    console.log('授权 - 获取并重定向URI:', {
+      encoded: encodedRedirectUri,
+      decoded: decodedRedirectUri
+    })
     setResponseType(searchParams.get('response_type') || 'code')
     setScope(searchParams.get('scope') || 'read write')
     setState(searchParams.get('state'))
@@ -62,6 +69,11 @@ export default function OAuthAuthorizePage() {
           }
 
           // 验证重定向URI
+          console.log('授权 - 验证重定向URI:', {
+            appRedirectUri: appData.redirect_uri,
+            requestRedirectUri: redirectUri
+          })
+          
           if (appData.redirect_uri !== redirectUri) {
             setError('无效的重定向URI')
             setLoading(false)
@@ -103,6 +115,11 @@ export default function OAuthAuthorizePage() {
       }
 
       // 验证重定向URI
+      console.log('授权 - 验证重定向URI (Supabase会话):', {
+        appRedirectUri: appData.redirect_uri,
+        requestRedirectUri: redirectUri
+      })
+      
       if (appData.redirect_uri !== redirectUri) {
         setError('无效的重定向URI')
         setLoading(false)
