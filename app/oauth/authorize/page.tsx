@@ -167,14 +167,18 @@ export default function OAuthAuthorizePage() {
       if (!redirectUri) {
         throw new Error('缺少重定向URI')
       }
-      const redirectUrl = new URL(redirectUri)
-      redirectUrl.searchParams.set('code', code)
-      if (state) {
-        redirectUrl.searchParams.set('state', state)
-      }
       
-      // 添加完整的userProfile到重定向参数
+      let finalRedirectUrl: string
+      
       try {
+        // 尝试使用URL对象（支持http/https等标准协议）
+        const redirectUrl = new URL(redirectUri)
+        redirectUrl.searchParams.set('code', code)
+        if (state) {
+          redirectUrl.searchParams.set('state', state)
+        }
+        
+        // 添加完整的userProfile到重定向参数
         const userProfileStr = localStorage.getItem('userProfile')
         if (userProfileStr) {
           const userProfile = JSON.parse(userProfileStr)
@@ -191,11 +195,51 @@ export default function OAuthAuthorizePage() {
           redirectUrl.searchParams.set('user_profile', userProfileParam)
           console.log('授权 - 添加用户资料到重定向参数')
         }
-      } catch (err) {
-        console.error('添加用户资料到重定向参数失败:', err)
+        
+        finalRedirectUrl = redirectUrl.toString()
+        console.log('授权 - 使用URL对象处理重定向URI:', finalRedirectUrl)
+      } catch (urlError) {
+        // URL对象创建失败，使用字符串拼接（支持自定义协议如app://）
+        console.log('授权 - 使用字符串拼接处理自定义协议:', redirectUri)
+        
+        const params = new URLSearchParams()
+        params.set('code', code)
+        if (state) {
+          params.set('state', state)
+        }
+        
+        // 添加完整的userProfile到重定向参数
+        try {
+          const userProfileStr = localStorage.getItem('userProfile')
+          if (userProfileStr) {
+            const userProfile = JSON.parse(userProfileStr)
+            // 移除敏感信息
+            const safeUserProfile = {
+              id: userProfile.id,
+              name: userProfile.name,
+              email: userProfile.email,
+              avatar_url: userProfile.avatar_url,
+              has_beta_access: userProfile.has_beta_access
+            }
+            // 将用户资料转换为JSON并编码
+            const userProfileParam = encodeURIComponent(JSON.stringify(safeUserProfile))
+            params.set('user_profile', userProfileParam)
+          }
+        } catch (err) {
+          console.error('添加用户资料到重定向参数失败:', err)
+        }
+        
+        const paramsString = params.toString()
+        // 确保即使是简单的app://也能正确处理
+        if (!redirectUri || redirectUri.trim() === '') {
+          throw new Error('重定向URI不能为空')
+        }
+        finalRedirectUrl = redirectUri + (redirectUri.includes('?') ? '&' : '?') + paramsString
+        console.log('授权 - 使用字符串拼接处理后的重定向URI:', finalRedirectUrl)
       }
       
-      window.location.href = redirectUrl.toString()
+      console.log('授权 - 最终重定向URL:', finalRedirectUrl)
+      window.location.href = finalRedirectUrl
     } catch (err: any) {
       console.error('授权失败:', err)
       setError('授权失败：' + (err.message || '未知错误'))
@@ -208,14 +252,42 @@ export default function OAuthAuthorizePage() {
       setError('缺少重定向URI')
       return
     }
-    const redirectUrl = new URL(redirectUri)
-    redirectUrl.searchParams.set('error', 'access_denied')
-    redirectUrl.searchParams.set('error_description', '用户取消了授权')
-    if (state) {
-      redirectUrl.searchParams.set('state', state)
+    
+    let finalRedirectUrl: string
+    
+    try {
+      // 尝试使用URL对象（支持http/https等标准协议）
+      const redirectUrl = new URL(redirectUri)
+      redirectUrl.searchParams.set('error', 'access_denied')
+      redirectUrl.searchParams.set('error_description', '用户取消了授权')
+      if (state) {
+        redirectUrl.searchParams.set('state', state)
+      }
+      finalRedirectUrl = redirectUrl.toString()
+      console.log('授权 - 取消授权，使用URL对象处理重定向URI:', finalRedirectUrl)
+    } catch (urlError) {
+      // URL对象创建失败，使用字符串拼接（支持自定义协议如app://）
+      console.log('授权 - 取消授权时使用字符串拼接处理自定义协议:', redirectUri)
+      
+      const params = new URLSearchParams()
+      params.set('error', 'access_denied')
+      params.set('error_description', '用户取消了授权')
+      if (state) {
+        params.set('state', state)
+      }
+      
+      const paramsString = params.toString()
+      // 确保即使是简单的app://也能正确处理
+      if (!redirectUri || redirectUri.trim() === '') {
+        setError('重定向URI不能为空')
+        return
+      }
+      finalRedirectUrl = redirectUri + (redirectUri.includes('?') ? '&' : '?') + paramsString
+      console.log('授权 - 取消授权，使用字符串拼接处理后的重定向URI:', finalRedirectUrl)
     }
     
-    window.location.href = redirectUrl.toString()
+    console.log('授权 - 取消授权，最终重定向URL:', finalRedirectUrl)
+    window.location.href = finalRedirectUrl
   }
 
   const generateAuthorizationCode = () => {
