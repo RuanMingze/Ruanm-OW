@@ -29,12 +29,12 @@ jobs:
     - name: Build application
       run: pnpm run build
 
-    - name: Build end
-      run: echo "Build and test completed successfully" && exit 0
-
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
         name: build-artifacts
         path: .next
         retention-days: 7
+
+    - name: Build end
+      run: echo "Build and test completed successfully"
