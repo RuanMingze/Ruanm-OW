@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+export const runtime = 'edge';
+
 // 接口请求参数类型
 interface EmailRequest {
   reply_to: string;
