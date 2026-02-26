@@ -2,21 +2,20 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Mail, Lock, User, UserPlus, LogIn } from 'lucide-react'
+import { Mail, Lock, User, ArrowLeft, Key } from 'lucide-react'
 import bcrypt from 'bcryptjs'
 import supabase from '@/lib/supabase'
 import { Header } from '@/components/header'
 
-// 处理环境变量为空的情况，确保路径拼接安全
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? ''
 
-export default function RegisterPage() {
+export default function ForgotPasswordPage() {
   const router = useRouter()
   const [username, setUsername] = useState<string>('')
-  const [fullName, setFullName] = useState<string>('')
   const [email, setEmail] = useState<string>('')
-  const [password, setPassword] = useState<string>('')
   const [verificationCode, setVerificationCode] = useState<string>('')
+  const [newPassword, setNewPassword] = useState<string>('')
+  const [confirmPassword, setConfirmPassword] = useState<string>('')
   const [generatedCode, setGeneratedCode] = useState<string>('')
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false)
   const [isSendingCode, setIsSendingCode] = useState<boolean>(false)
@@ -24,13 +23,10 @@ export default function RegisterPage() {
   const [success, setSuccess] = useState<string>('')
   const [mounted, setMounted] = useState<boolean>(false)
   const [countdown, setCountdown] = useState<number>(0)
+  const [step, setStep] = useState<number>(1)
 
   useEffect(() => {
     setMounted(true)
-    const fetchSession = async () => {
-      await checkSession()
-    }
-    fetchSession()
   }, [])
 
   // 倒计时效果
@@ -38,7 +34,7 @@ export default function RegisterPage() {
     let interval: NodeJS.Timeout
     if (countdown > 0) {
       interval = setInterval(() => {
-        setCountdown(countdown - 1)
+        setCountdown(prev => prev - 1)
       }, 1000)
     }
     return () => {
@@ -46,18 +42,11 @@ export default function RegisterPage() {
     }
   }, [countdown])
 
-  const checkSession = async () => {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (session?.user) {
-      router.push('/user')
-    }
-  }
-
   // 发送验证码
   const sendVerificationCode = async () => {
     if (countdown > 0) return
-    if (!email.trim()) {
-      setError('请先输入邮箱')
+    if (!username.trim() || !email.trim()) {
+      setError('请先输入账户名和邮箱')
       return
     }
 
@@ -79,6 +68,18 @@ export default function RegisterPage() {
     setError('')
 
     try {
+      // 检查用户是否存在
+      const { data: profile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('name', username.trim())
+        .eq('email', email.trim())
+        .single()
+
+      if (profileError || !profile) {
+        throw new Error('账户名和邮箱不匹配')
+      }
+
       // 生成6位随机验证码
       const code = Math.floor(100000 + Math.random() * 900000).toString()
       setGeneratedCode(code)
@@ -91,9 +92,9 @@ export default function RegisterPage() {
         },
         body: JSON.stringify({
           reply_to: email.trim(),
-          subject: '[Ruanm] 注册验证码',
-          text: `您的注册验证码是：${code}\n\n此验证码60秒内有效，请尽快完成注册。`,
-          html: `<h2>注册验证码</h2><p>您的注册验证码是：<strong>${code}</strong></p><p>此验证码60秒内有效，请尽快完成注册。</p>`
+          subject: '[Ruanm] 重置密码验证码',
+          text: `您的重置密码验证码是：${code}\n\n此验证码60秒内有效，请尽快完成密码重置。`,
+          html: `<h2>重置密码验证码</h2><p>您的重置密码验证码是：<strong>${code}</strong></p><p>此验证码60秒内有效，请尽快完成密码重置。</p>`
         }),
       })
 
@@ -114,18 +115,23 @@ export default function RegisterPage() {
     }
   }
 
-  const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleResetPassword = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setError('')
     setSuccess('')
 
-    if (!username.trim() || !email.trim() || !password.trim() || !verificationCode.trim()) {
-      setError('用户名、邮箱、密码、验证码为必填项')
+    if (!username.trim() || !email.trim() || !verificationCode.trim() || !newPassword.trim() || !confirmPassword.trim()) {
+      setError('所有字段为必填项')
       return
     }
 
-    if (password.length < 6) {
+    if (newPassword.length < 6) {
       setError('密码长度至少6位')
+      return
+    }
+
+    if (newPassword !== confirmPassword) {
+      setError('两次输入的密码不一致')
       return
     }
 
@@ -138,52 +144,48 @@ export default function RegisterPage() {
     setIsSubmitting(true)
 
     try {
-      const { data, error: authError } = await supabase.auth.signUp({
-        email: email.trim(),
-        password: password.trim(),
-        options: {
-          emailRedirectTo: `${window.location.origin}${basePath}/auth/callback`,
-          data: {
-            username: username.trim(),
-            full_name: fullName.trim() || username.trim(),
-          },
-        },
-      })
-
-      if (authError) throw authError
-
-      const saltRounds = 10
-      const hashedPassword = await bcrypt.hash(password.trim(), saltRounds)
-
-      const { error: insertError } = await supabase
+      // 检查用户是否存在
+      const { data: profile, error: profileError } = await supabase
         .from('user_profiles')
-        .insert({
-          name: username.trim(),
-          email: email.trim(),
-          hashed_password: hashedPassword,
-          has_beta_access: false,
-        })
+        .select('*')
+        .eq('name', username.trim())
+        .eq('email', email.trim())
+        .single()
 
-      if (insertError) throw insertError
-
-      setSuccess('注册成功！请登录')
-      setUsername('')
-      setFullName('')
-      setEmail('')
-      setPassword('')
-      setVerificationCode('')
-      setGeneratedCode('')
-    } catch (err: unknown) {
-      console.error('注册失败:', err)
-      const errorMessage = err instanceof Error ? err.message : '未知错误'
-      
-      if (errorMessage.includes('Email already registered') || errorMessage.includes('User already registered')) {
-        setError('该邮箱已注册，请直接登录')
-      } else if (errorMessage.includes('Invalid email')) {
-        setError('邮箱格式不正确')
-      } else {
-        setError(`注册失败：${errorMessage}`)
+      if (profileError || !profile) {
+        throw new Error('账户名和邮箱不匹配')
       }
+
+      // 加密新密码
+      const saltRounds = 10
+      const hashedPassword = await bcrypt.hash(newPassword.trim(), saltRounds)
+
+      // 更新密码
+      const { error: updateError } = await supabase
+        .from('user_profiles')
+        .update({
+          hashed_password: hashedPassword,
+        })
+        .eq('id', profile.id)
+
+      if (updateError) throw updateError
+
+      setSuccess('密码重置成功！请使用新密码登录')
+      setUsername('')
+      setEmail('')
+      setVerificationCode('')
+      setNewPassword('')
+      setConfirmPassword('')
+      setGeneratedCode('')
+
+      // 延迟跳转到登录页面
+      setTimeout(() => {
+        router.push(`${basePath}/login`)
+      }, 2000)
+    } catch (err: unknown) {
+      console.error('重置密码失败:', err)
+      const errorMessage = err instanceof Error ? err.message : '未知错误'
+      setError(`重置密码失败：${errorMessage}`)
     } finally {
       setIsSubmitting(false)
     }
@@ -201,17 +203,17 @@ export default function RegisterPage() {
           <div className="bg-card border border-border rounded-2xl p-8 shadow-lg">
             <div className="text-center mb-8">
               <h1 className="text-3xl font-bold text-primary mb-2">
-                创建账号
+                重置密码
               </h1>
               <p className="text-muted-foreground">
-                注册您的账号以访问更多功能
+                输入账户信息以重置密码
               </p>
             </div>
 
-            <form onSubmit={handleRegister} className="space-y-6">
+            <form onSubmit={handleResetPassword} className="space-y-6">
               <div>
                 <label htmlFor="username" className="block text-sm font-medium text-primary mb-2">
-                  用户名
+                  账户名
                 </label>
                 <div className="relative">
                   <User 
@@ -223,28 +225,8 @@ export default function RegisterPage() {
                     type="text"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    placeholder="请输入用户名"
+                    placeholder="请输入账户名"
                     required
-                    className="w-full pl-12 pr-4 py-3 rounded-lg border border-border bg-background text-primary placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-colors"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="full_name" className="block text-sm font-medium text-primary mb-2">
-                  全名（选填）
-                </label>
-                <div className="relative">
-                  <UserPlus 
-                    size={18} 
-                    className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground"
-                  />
-                  <input
-                    id="full_name"
-                    type="text"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder="请输入全名（选填）"
                     className="w-full pl-12 pr-4 py-3 rounded-lg border border-border bg-background text-primary placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-colors"
                   />
                 </div>
@@ -306,8 +288,8 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-primary mb-2">
-                  密码（至少6位）
+                <label htmlFor="newPassword" className="block text-sm font-medium text-primary mb-2">
+                  新密码（至少6位）
                 </label>
                 <div className="relative">
                   <Lock 
@@ -315,11 +297,33 @@ export default function RegisterPage() {
                     className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground"
                   />
                   <input
-                    id="password"
+                    id="newPassword"
                     type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="请输入密码（至少6位）"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="请输入新密码"
+                    required
+                    minLength={6}
+                    className="w-full pl-12 pr-4 py-3 rounded-lg border border-border bg-background text-primary placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-colors"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-primary mb-2">
+                  确认新密码
+                </label>
+                <div className="relative">
+                  <Key 
+                    size={18} 
+                    className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground"
+                  />
+                  <input
+                    id="confirmPassword"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="请再次输入新密码"
                     required
                     minLength={6}
                     className="w-full pl-12 pr-4 py-3 rounded-lg border border-border bg-background text-primary placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-colors"
@@ -351,12 +355,12 @@ export default function RegisterPage() {
                 {isSubmitting ? (
                   <>
                     <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"></div>
-                    注册中...
+                    重置中...
                   </>
                 ) : (
                   <>
-                    <UserPlus size={18} />
-                    注册账号
+                    <Lock size={18} />
+                    重置密码
                   </>
                 )}
               </button>
@@ -366,24 +370,11 @@ export default function RegisterPage() {
                   href={`${basePath}/login`}
                   className="text-sm text-primary hover:text-primary/80 transition-colors inline-flex items-center gap-1"
                 >
-                  <LogIn size={14} />
-                  已有账号？前往登录
+                  <ArrowLeft size={14} />
+                  返回登录
                 </a>
               </div>
             </form>
-
-            <div className="mt-6 text-center text-sm text-muted-foreground">
-              <p>注册即表示您同意我们的</p>
-              <div className="flex items-center justify-center gap-2 mt-1">
-                <a href={`${basePath}/terms`} className="text-primary hover:text-primary/80 transition-colors">
-                  服务条款
-                </a>
-                <span>和</span>
-                <a href={`${basePath}/privacy`} className="text-primary hover:text-primary/80 transition-colors">
-                  隐私政策
-                </a>
-              </div>
-            </div>
           </div>
         </div>
       </div>

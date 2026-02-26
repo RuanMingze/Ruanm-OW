@@ -70,7 +70,7 @@ export default function LoginPage() {
     setSuccess('')
 
     if (!email.trim() || !password.trim()) {
-      setError('邮箱和密码为必填项')
+      setError('用户名/邮箱和密码为必填项')
       return
     }
 
@@ -81,20 +81,16 @@ export default function LoginPage() {
       let authSuccess = false
 
       try {
-        console.log('登录 - 准备查询user_profiles，邮箱:', email.trim())
+        console.log('登录 - 准备查询user_profiles，输入:', email.trim())
         
         const supabaseUrl = 'https://pyywrxrmtehucmkpqkdi.supabase.co'
         const supabaseKey = 'sb_publishable_Ztie93n2pi48h_rAIuviyA_ftjAIDuj'
-        const requestUrl = `${supabaseUrl}/rest/v1/user_profiles?select=*&email=eq.${encodeURIComponent(email.trim())}`
         
-        console.log('登录 - 请求URL:', requestUrl)
-        console.log('登录 - 请求头:', {
-          'apikey': supabaseKey,
-          'Authorization': `Bearer ${supabaseKey}`,
-          'Content-Type': 'application/json'
-        })
+        // 先尝试按用户名查询
+        let requestUrl = `${supabaseUrl}/rest/v1/user_profiles?select=*&name=eq.${encodeURIComponent(email.trim())}`
+        console.log('登录 - 尝试按用户名查询:', requestUrl)
         
-        const response = await fetch(requestUrl, {
+        let response = await fetch(requestUrl, {
           method: 'GET',
           headers: {
             'apikey': supabaseKey,
@@ -104,10 +100,27 @@ export default function LoginPage() {
         })
         
         console.log('登录 - 响应状态:', response.status)
-        console.log('登录 - 响应头:', Object.fromEntries(response.headers.entries()))
         
-        const profile = await response.json()
-        console.log('登录 - 从user_profiles读取profile:', profile)
+        let profile = await response.json()
+        console.log('登录 - 从user_profiles读取profile (用户名):', profile)
+        
+        // 如果用户名查询不到，尝试按全名查询
+        if (!profile || profile.length === 0) {
+          requestUrl = `${supabaseUrl}/rest/v1/user_profiles?select=*&full_name=eq.${encodeURIComponent(email.trim())}`
+          console.log('登录 - 尝试按全名查询:', requestUrl)
+          
+          response = await fetch(requestUrl, {
+            method: 'GET',
+            headers: {
+              'apikey': supabaseKey,
+              'Authorization': `Bearer ${supabaseKey}`,
+              'Content-Type': 'application/json'
+            }
+          })
+          
+          profile = await response.json()
+          console.log('登录 - 从user_profiles读取profile (全名):', profile)
+        }
         
         if (profile && profile.length > 0) {
           const passwordMatch = await bcrypt.compare(password.trim(), profile[0].hashed_password)
@@ -122,6 +135,7 @@ export default function LoginPage() {
       }
 
       if (!userProfileData) {
+        // 如果用户名和全名都查询不到，尝试邮箱登录
         const { data, error } = await supabase.auth.signInWithPassword({
           email: email.trim(),
           password: password.trim(),
@@ -284,7 +298,7 @@ export default function LoginPage() {
               <form onSubmit={handleEmailLogin} className="space-y-6">
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-primary mb-2">
-                    邮箱
+                    邮箱或用户名
                   </label>
                   <div className="relative">
                     <Mail 
@@ -293,10 +307,10 @@ export default function LoginPage() {
                     />
                     <input
                       id="email"
-                      type="email"
+                      type="text"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="请输入邮箱"
+                      placeholder="请输入邮箱或用户名"
                       required
                       className="w-full pl-12 pr-4 py-3 rounded-lg border border-border bg-background text-primary placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-colors"
                     />
@@ -321,6 +335,14 @@ export default function LoginPage() {
                       required
                       className="w-full pl-12 pr-4 py-3 rounded-lg border border-border bg-background text-primary placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-colors"
                     />
+                  </div>
+                  <div className="text-right mt-2">
+                    <a
+                      href={`${basePath}/forgot-password`}
+                      className="text-sm text-primary hover:text-primary/80 transition-colors"
+                    >
+                      忘记密码？
+                    </a>
                   </div>
                 </div>
 

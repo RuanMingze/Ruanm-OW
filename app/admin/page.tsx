@@ -154,8 +154,7 @@ export default function AdminPage() {
 
   const isOfficialUser = (userName: string) => {
     if (!userName) return false
-    const lowerName = userName.toLowerCase()
-    return lowerName === 'ruanm' || lowerName === 'ruanmingze'
+    return userName === 'Ruanm' || userName === 'RuanMingze' || userName === 'ruanmingze'
   }
 
   const isFakeOfficialUser = (userName: string) => {
