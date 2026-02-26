@@ -29,11 +29,21 @@ jobs:
     - name: Build application
       run: pnpm run build
 
+    - name: Check build output
+      run: |
+        ls -la
+        if [ -d ".next" ]; then
+          echo ".next directory exists"
+          ls -la .next
+        else
+          echo ".next directory does not exist"
+        fi
+
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
         name: build-artifacts
-        path: .next
+        path: .next/server
         retention-days: 7
 
     - name: Build end
