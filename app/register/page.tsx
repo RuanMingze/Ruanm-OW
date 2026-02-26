@@ -1,14 +1,29 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Mail, Lock, User, UserPlus, LogIn } from 'lucide-react'
 import bcrypt from 'bcryptjs'
 import supabase from '@/lib/supabase'
 import { Header } from '@/components/header'
 
+// 扩展Window接口，添加turnstile属性
+declare global {
+  interface Window {
+    turnstile: {
+      render: (container: HTMLElement, options: {
+        sitekey: string;
+        callback: (token: string) => void;
+        errorCallback?: () => void;
+      }) => void;
+      reset: () => void;
+    };
+  }
+}
+
 // 处理环境变量为空的情况，确保路径拼接安全
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? ''
+const turnstileSiteKey = process.env.NEXT_PUBLIC_CF_TURNSTILE_SITE_KEY ?? ''
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -27,6 +42,8 @@ export default function RegisterPage() {
   const [mounted, setMounted] = useState<boolean>(false)
   const [isSendingCode, setIsSendingCode] = useState<boolean>(false)
   const [redirectUrl, setRedirectUrl] = useState<string | null>(null)
+  const [turnstileToken, setTurnstileToken] = useState<string>('')
+  const turnstileRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     // 在客户端获取重定向地址
@@ -41,6 +58,81 @@ export default function RegisterPage() {
     }
     fetchSession()
   }, [])
+
+  // 加载CF Turnstile脚本
+  useEffect(() => {
+    // 确保在组件完全渲染完成后再尝试渲染turnstile组件
+    if (typeof window !== 'undefined' && turnstileSiteKey) {
+      console.log('Turnstile site key:', turnstileSiteKey)
+      
+      // 检查是否已经加载了turnstile脚本
+      if (!window.turnstile) {
+        console.log('Loading turnstile script')
+        const script = document.createElement('script')
+        script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit'
+        script.async = true
+        script.defer = true
+        document.body.appendChild(script)
+
+        script.onload = () => {
+          console.log('Turnstile script loaded')
+          // 脚本加载完成后，等待一小段时间确保DOM已经更新
+          setTimeout(() => {
+            console.log('Turnstile ref after timeout:', turnstileRef.current)
+            if (window.turnstile && turnstileRef.current) {
+              console.log('Rendering turnstile widget')
+              window.turnstile.render(turnstileRef.current, {
+                sitekey: turnstileSiteKey,
+                callback: (token: string) => {
+                  console.log('Turnstile callback called with token:', token)
+                  setTurnstileToken(token)
+                },
+                errorCallback: () => {
+                  console.log('Turnstile error callback called')
+                  setError('人机验证失败，请重试')
+                }
+              })
+            } else {
+              console.log('Cannot render turnstile widget:', {
+                turnstile: window.turnstile,
+                turnstileRef: turnstileRef.current
+              })
+            }
+          }, 100)
+        }
+      } else {
+        console.log('Turnstile script already loaded')
+        // 等待一小段时间确保DOM已经更新
+        setTimeout(() => {
+          console.log('Turnstile ref after timeout:', turnstileRef.current)
+          if (window.turnstile && turnstileRef.current) {
+            console.log('Rendering turnstile widget')
+            window.turnstile.render(turnstileRef.current, {
+              sitekey: turnstileSiteKey,
+              callback: (token: string) => {
+                console.log('Turnstile callback called with token:', token)
+                setTurnstileToken(token)
+              },
+              errorCallback: () => {
+                console.log('Turnstile error callback called')
+                setError('人机验证失败，请重试')
+              }
+            })
+          } else {
+            console.log('Cannot render turnstile widget:', {
+              turnstile: window.turnstile,
+              turnstileRef: turnstileRef.current
+            })
+          }
+        }, 100)
+      }
+    } else {
+      console.log('Cannot load turnstile:', {
+        window: typeof window !== 'undefined',
+        turnstileSiteKey: !!turnstileSiteKey
+      })
+    }
+  }, [turnstileSiteKey])
 
   // 注册成功后自动重定向
   useEffect(() => {
@@ -158,10 +250,43 @@ export default function RegisterPage() {
       return
     }
 
+    // 验证人机验证
+    if (!turnstileToken) {
+      setError('请完成人机验证')
+      return
+    }
+
+    // 验证人机验证token
+    try {
+      const response = await fetch('/api/turnstile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ token: turnstileToken }),
+      })
+
+      const result = await response.json()
+
+      if (!result.success) {
+        setError('人机验证失败，请重试')
+        // 重置人机验证
+        if (typeof window !== 'undefined' && window.turnstile) {
+          window.turnstile.reset()
+          setTurnstileToken('')
+        }
+        return
+      }
+    } catch (err) {
+      console.error('验证人机验证时出错:', err)
+      setError('服务器错误，请重试')
+      return
+    }
+
     setIsSubmitting(true)
 
     try {
-      const { data, error: authError } = await supabase.auth.signUp({
+      const { error: authError } = await supabase.auth.signUp({
         email: email.trim(),
         password: password.trim(),
         options: {
@@ -419,6 +544,16 @@ export default function RegisterPage() {
                       className="w-full pl-12 pr-4 py-3 rounded-lg border border-border bg-background text-primary placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-colors"
                     />
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-primary mb-2">
+                    人机验证
+                  </label>
+                  <div 
+                    ref={turnstileRef} 
+                    className="w-full p-4 rounded-lg border border-border bg-background"
+                  ></div>
                 </div>
 
                 {error && (
