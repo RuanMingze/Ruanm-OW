@@ -382,7 +382,7 @@ export default function LoginPage() {
 
                 <div className="text-center">
                   <a
-                    href={`${basePath}/register`}
+                    href={`${basePath}/register${redirectUrl ? `?redirect=${encodeURIComponent(redirectUrl)}` : ''}`}
                     className="text-sm text-primary hover:text-primary/80 transition-colors"
                   >
                     还没有账号？立即注册
