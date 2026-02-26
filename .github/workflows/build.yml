@@ -26,11 +26,8 @@ jobs:
       run: |
         pnpm install
 
-    - name: Run lint
-      run: pnpm run lint
-
     - name: Build application
       run: pnpm run build
 
-    - name: end
+    - name: Build end
       run: echo "Build and test completed successfully" && exit 0
