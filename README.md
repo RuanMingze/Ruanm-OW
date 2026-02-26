@@ -85,7 +85,7 @@ pnpm lint
 3. 构建完成后自动部署到 Cloudflare Pages 全球网络
 
 ### 访问链接
-- **Cloudflare Pages**: https://3e01b70.ruanm.pages.dev
+- **Cloudflare Pages**: https://ruanmgjx.dpdns.org
 - **GitHub 仓库**: https://github.com/RuanMingze/Ruanm-OW
 
 ## 贡献

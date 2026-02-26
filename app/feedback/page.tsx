@@ -70,24 +70,51 @@ export default function FeedbackPage() {
     })
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [success, setSuccess] = useState('')
+  const [error, setError] = useState('')
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
+    setSuccess('')
+    setError('')
 
-    const email = 'support@ruanmgjx.dpdns.org'
-    const subject = encodeURIComponent(`[反馈] ${formData.subject}`)
-    const body = encodeURIComponent(
-      `姓名：${formData.name}\n` +
-      `邮箱：${formData.email}\n\n` +
-      `反馈内容：\n${formData.message}`
-    )
+    try {
+      const response = await fetch('/api/email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          reply_to: formData.email,
+          subject: `[反馈] ${formData.subject}`,
+          text: `姓名：${formData.name}\n邮箱：${formData.email}\n\n反馈内容：\n${formData.message}`,
+          html: `<h2>反馈：${formData.subject}</h2><p><strong>姓名：</strong>${formData.name}</p><p><strong>邮箱：</strong>${formData.email}</p><p><strong>反馈内容：</strong></p><p>${formData.message.replace(/\n/g, '<br />')}</p>`
+        }),
+      })
 
-    const mailtoLink = `mailto:${email}?subject=${subject}&body=${body}`
-    
-    setTimeout(() => {
-      window.location.href = mailtoLink
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || '发送邮件失败')
+      }
+
+      setSuccess('反馈发送成功！我们会尽快回复您。')
+      
+      // 重置表单
+      setFormData({
+        name: user?.name || '',
+        email: user?.email || '',
+        subject: '',
+        message: ''
+      })
+      
+    } catch (err: any) {
+      console.error('发送反馈失败:', err)
+      setError('发送反馈失败：' + (err.message || '未知错误'))
+    } finally {
       setIsSubmitting(false)
-    }, 500)
+    }
   }
 
   return (
@@ -194,9 +221,20 @@ export default function FeedbackPage() {
 
             <div className="mt-8 p-4 bg-muted/50 rounded-lg">
               <p className="text-sm text-muted-foreground text-center">
-                点击发送后，将自动打开您的邮件客户端，您可以直接发送邮件
+                点击发送后，我们会直接收到您的反馈，无需打开邮件客户端
               </p>
             </div>
+
+            {success && (
+              <div className="mt-4 p-4 bg-green-50 text-green-700 rounded-lg">
+                {success}
+              </div>
+            )}
+            {error && (
+              <div className="mt-4 p-4 bg-red-50 text-red-700 rounded-lg">
+                {error}
+              </div>
+            )}
           </div>
         </div>
       </main>

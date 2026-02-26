@@ -134,7 +134,7 @@ OAuth 2.0 是一个开放标准，用于授权第三方应用访问用户资源�
 引导用户访问授权页面：
 
 \`\`\`text
-https://ruanm.pages.dev/oauth/authorize?client_id=YOUR_CLIENT_ID&redirect_uri=YOUR_REDIRECT_URI&response_type=code&scope=read write
+https://ruanmgjx.dpdns.org/oauth/authorize?client_id=YOUR_CLIENT_ID&redirect_uri=YOUR_REDIRECT_URI&response_type=code&scope=read write
 \`\`\`
 
 ### 3. 获取访问令牌
@@ -142,7 +142,7 @@ https://ruanm.pages.dev/oauth/authorize?client_id=YOUR_CLIENT_ID&redirect_uri=YO
 用户授权后，使用授权码换取访问令牌：
 
 \`\`\`javascript
-const response = await fetch('https://ruanm.pages.dev/oauth/token', {
+const response = await fetch('https://ruanmgjx.dpdns.org/oauth/token', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
@@ -164,7 +164,7 @@ const { access_token, refresh_token } = await response.json()
 使用访问令牌调用受保护的 API：
 
 \`\`\`javascript
-const response = await fetch('https://ruanm.pages.dev/api/protected', {
+const response = await fetch('https://ruanmgjx.dpdns.org/api/protected', {
   headers: {
     'Authorization': \`Bearer \${access_token}\`
   }
@@ -390,7 +390,7 @@ scope=read
 
 \`\`\`javascript
 // 1. 构建授权 URL
-const authUrl = new URL('https://ruanm.pages.dev/oauth/authorize')
+const authUrl = new URL('https://ruanmgjx.dpdns.org/oauth/authorize')
 authUrl.searchParams.set('client_id', 'YOUR_CLIENT_ID')
 authUrl.searchParams.set('redirect_uri', 'YOUR_REDIRECT_URI')
 authUrl.searchParams.set('response_type', 'code')
@@ -427,7 +427,7 @@ if (code) {
   localStorage.setItem('oauth_refresh_token', refresh_token)
 
   // 6. 使用访问令牌调用 API
-  const apiResponse = await fetch('https://ruanm.pages.dev/api/user', {
+  const apiResponse = await fetch('https://ruanmgjx.dpdns.org/api/user', {
     headers: {
       'Authorization': \`Bearer \${access_token}\`
     }
@@ -444,7 +444,7 @@ if (code) {
 async function refreshAccessToken() {
   const refreshToken = localStorage.getItem('oauth_refresh_token')
 
-  const response = await fetch('https://ruanm.pages.dev/oauth/token', {
+  const response = await fetch('https://ruanmgjx.dpdns.org/oauth/token', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -476,7 +476,7 @@ async function callApi(endpoint, options = {}) {
     throw new Error('未找到访问令牌')
   }
 
-  const response = await fetch('https://ruanm.pages.dev/api' + endpoint, {
+  const response = await fetch('https://ruanmgjx.dpdns.org/api' + endpoint, {
     ...options,
     headers: {
       ...options.headers,
@@ -545,7 +545,7 @@ console.log('错误信息:', error)
 
 \`\`\`bash
 # 测试令牌端点
-curl -X POST https://ruanm.pages.dev/oauth/token \\
+curl -X POST https://ruanmgjx.dpdns.org/oauth/token \\
   -H "Content-Type: application/json" \\
   -d '{\n    "grant_type": "authorization_code",\n    "code": "AUTHORIZATION_CODE",\n    "client_id": "YOUR_CLIENT_ID",\n    "client_secret": "YOUR_CLIENT_SECRET",\n    "redirect_uri": "YOUR_REDIRECT_URI"\n  }'
 \`\`\`

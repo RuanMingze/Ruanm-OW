@@ -35,19 +35,28 @@ export default function LoginPage() {
   // 登录成功后自动重定向
   useEffect(() => {
     if (loginSuccess && redirectUrl) {
-      // 延迟一小段时间，让用户看到登录成功的消息
-      setTimeout(() => {
-        try {
-          // 解码重定向URL
-          const decodedRedirectUrl = decodeURIComponent(redirectUrl)
-          console.log('登录成功，自动重定向到:', decodedRedirectUrl)
+      try {
+        // 解码重定向URL
+        const decodedRedirectUrl = decodeURIComponent(redirectUrl)
+        console.log('登录成功，自动重定向到:', decodedRedirectUrl)
+        
+        // 检查是否是重定向到授权页面
+        const isOAuthRedirect = decodedRedirectUrl.includes('/oauth/authorize')
+        
+        if (isOAuthRedirect) {
+          // 如果是授权页面，立即重定向，不显示登录成功消息
           window.location.href = decodedRedirectUrl
-        } catch (err) {
-          console.error('重定向失败:', err)
-          // 如果重定向失败，默认去用户中心
-          router.push('/user')
+        } else {
+          // 延迟一小段时间，让用户看到登录成功的消息
+          setTimeout(() => {
+            window.location.href = decodedRedirectUrl
+          }, 1000)
         }
-      }, 1000)
+      } catch (err) {
+        console.error('重定向失败:', err)
+        // 如果重定向失败，默认去用户中心
+        router.push('/user')
+      }
     }
   }, [loginSuccess, redirectUrl, router])
 
@@ -222,7 +231,21 @@ export default function LoginPage() {
               </p>
             </div>
 
-            {loginSuccess ? (
+            {loginSuccess && redirectUrl && redirectUrl.includes('/oauth/authorize') ? (
+              <div className="text-center py-8">
+                <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-blue-500/10 flex items-center justify-center">
+                  <svg className="w-10 h-10 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                  </svg>
+                </div>
+                <h2 className="text-2xl font-bold text-primary mb-2">
+                  正在授权...
+                </h2>
+                <p className="text-muted-foreground">
+                  登录成功，正在跳转到授权页面...
+                </p>
+              </div>
+            ) : loginSuccess ? (
               <div className="space-y-6">
                 <div className="text-center py-8">
                   <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-green-500/10 flex items-center justify-center">
