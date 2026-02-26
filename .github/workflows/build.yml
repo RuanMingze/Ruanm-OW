@@ -1,4 +1,4 @@
-name: Build and Test
+name: Build the project
 
 on:
   push:
@@ -31,3 +31,10 @@ jobs:
 
     - name: Build end
       run: echo "Build and test completed successfully" && exit 0
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-artifacts
+        path: .next
+        retention-days: 7
