@@ -8,6 +8,7 @@ interface EmailRequest {
   subject: string;
   text: string;
   html?: string;
+  from?: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -62,6 +63,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 确定发件人地址
+    const fromAddress = body.from || 'no-reply@ruanmgjx.dpdns.org';
+
     // 调用 Resend API 发送邮件
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -70,8 +74,8 @@ export async function POST(request: NextRequest) {
         'Authorization': `Bearer ${resendApiKey}`,
       },
       body: JSON.stringify({
-        from: 'onboarding@resend.dev',
-        to: 'xmt20160124@outlook.com',
+        from: fromAddress,
+        to: supportEmail,
         reply_to: body.reply_to,
         subject: body.subject,
         text: body.text,

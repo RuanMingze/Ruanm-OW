@@ -98,13 +98,6 @@ export default function RegisterPage() {
       return
     }
 
-    // 检测邮箱后缀，暂时只允许Outlook邮箱
-    const outlookRegex = /@outlook\.com$/i
-    if (!outlookRegex.test(email.trim())) {
-      setError('暂时仅支持Outlook邮箱')
-      return
-    }
-
     setIsSendingCode(true)
     setError('')
 
