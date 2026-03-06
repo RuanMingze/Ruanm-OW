@@ -78,7 +78,7 @@ export default function ForgotPasswordPage() {
       setGeneratedCode(code)
 
       // 调用邮件发送接口
-      const response = await fetch('/api/email', {
+      const response = await fetch('/api/v1/email', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

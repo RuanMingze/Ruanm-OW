@@ -80,7 +80,7 @@ export default function FeedbackPage() {
     setError('')
 
     try {
-      const response = await fetch('/api/email', {
+      const response = await fetch('/api/v1/email', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

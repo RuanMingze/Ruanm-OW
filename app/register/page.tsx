@@ -199,7 +199,7 @@ export default function RegisterPage() {
       setGeneratedCode(code)
 
       // 调用邮件发送接口
-      const response = await fetch('/api/email', {
+      const response = await fetch('/api/v1/email', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -258,7 +258,7 @@ export default function RegisterPage() {
 
     // 验证人机验证token
     try {
-      const response = await fetch('/api/turnstile', {
+      const response = await fetch('/api/v1/turnstile', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -613,6 +613,12 @@ export default function RegisterPage() {
                   隐私政策
                 </a>
               </div>
+            </div>
+
+            <div className="mt-6 flex justify-center">
+              <a href="https://cloudflare.com" target="_blank" rel="noopener noreferrer">
+                <img src="https://workers.cloudflare.com/built-with-cloudflare.svg" alt="Built with Cloudflare" className="h-8 w-auto" />
+              </a>
             </div>
           </div>
         </div>
