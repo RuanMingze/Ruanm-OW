@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export const runtime = 'edge'
 
+// CORS 配置
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Access-Control-Max-Age': '86400',
+}
+
 interface AIRequest {
   model?: string
   messages: Array<{
@@ -13,6 +21,14 @@ interface AIRequest {
   stream?: boolean
 }
 
+// 处理 OPTIONS 预检请求
+export async function OPTIONS(request: NextRequest) {
+  return new NextResponse(null, {
+    status: 204,
+    headers: corsHeaders,
+  })
+}
+
 export async function POST(request: NextRequest) {
   try {
     const openRouterApiKey = process.env.OPENROUTER_API_KEY
@@ -20,7 +36,7 @@ export async function POST(request: NextRequest) {
     if (!openRouterApiKey) {
       return NextResponse.json(
         { error: 'OPENROUTER_API_KEY 环境变量未设置' },
-        { status: 500 }
+        { status: 500, headers: corsHeaders }
       )
     }
 
@@ -32,7 +48,7 @@ export async function POST(request: NextRequest) {
       if (!rawBody) {
         return NextResponse.json(
           { error: '请求体不能为空' },
-          { status: 400 }
+          { status: 400, headers: corsHeaders }
         )
       }
 
@@ -41,14 +57,14 @@ export async function POST(request: NextRequest) {
       console.error('解析请求体失败:', parseError)
       return NextResponse.json(
         { error: '请求体不是有效的JSON格式' },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       )
     }
 
     if (!body.messages || !Array.isArray(body.messages) || body.messages.length === 0) {
       return NextResponse.json(
         { error: '缺少必要参数：messages' },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       )
     }
 
@@ -76,7 +92,7 @@ export async function POST(request: NextRequest) {
       if (!response.body) {
         return NextResponse.json(
           { error: 'OpenRouter API 未返回流式响应' },
-          { status: 500 }
+          { status: 500, headers: corsHeaders }
         )
       }
 
@@ -101,6 +117,7 @@ export async function POST(request: NextRequest) {
       return new NextResponse(readable, {
         status: 200,
         headers: {
+          ...corsHeaders,
           'Content-Type': 'text/event-stream',
           'Cache-Control': 'no-cache',
           'Connection': 'keep-alive',
@@ -123,24 +140,24 @@ export async function POST(request: NextRequest) {
         console.error('解析 OpenRouter API 响应失败:', parseError)
         return NextResponse.json(
           { error: '解析 OpenRouter API 响应失败' },
-          { status: 500 }
+          { status: 500, headers: corsHeaders }
         )
       }
 
       if (!response.ok) {
         return NextResponse.json(
           { error: '调用 AI 服务失败', details: openRouterResponse },
-          { status: response.status }
+          { status: response.status, headers: corsHeaders }
         )
       }
 
-      return NextResponse.json(openRouterResponse, { status: 200 })
+      return NextResponse.json(openRouterResponse, { status: 200, headers: corsHeaders })
     }
   } catch (error) {
     console.error('调用 AI 服务时发生错误:', error)
     return NextResponse.json(
       { error: '调用 AI 服务时发生内部错误' },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     )
   }
 }
