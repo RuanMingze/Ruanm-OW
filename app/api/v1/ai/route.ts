@@ -71,32 +71,71 @@ export async function POST(request: NextRequest) {
       }),
     })
 
-    let openRouterResponse
-    try {
-      const rawResponse = await response.text()
-      console.log('OpenRouter API 响应:', rawResponse)
-
-      if (!rawResponse) {
-        throw new Error('OpenRouter API 返回空响应')
+    if (body.stream) {
+      // 流式输出
+      if (!response.body) {
+        return NextResponse.json(
+          { error: 'OpenRouter API 未返回流式响应' },
+          { status: 500 }
+        )
       }
 
-      openRouterResponse = JSON.parse(rawResponse)
-    } catch (parseError) {
-      console.error('解析 OpenRouter API 响应失败:', parseError)
-      return NextResponse.json(
-        { error: '解析 OpenRouter API 响应失败' },
-        { status: 500 }
-      )
-    }
+      const readable = new ReadableStream({
+        async start(controller) {
+          const reader = response.body.getReader()
+          let done = false
 
-    if (!response.ok) {
-      return NextResponse.json(
-        { error: '调用 AI 服务失败', details: openRouterResponse },
-        { status: response.status }
-      )
-    }
+          while (!done) {
+            const { value, done: readerDone } = await reader.read()
+            done = readerDone
 
-    return NextResponse.json(openRouterResponse, { status: 200 })
+            if (value) {
+              controller.enqueue(value)
+            }
+          }
+
+          controller.close()
+        },
+      })
+
+      return new NextResponse(readable, {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+          'X-Accel-Buffering': 'no',
+        },
+      })
+    } else {
+      // 非流式输出（原有逻辑）
+      let openRouterResponse
+      try {
+        const rawResponse = await response.text()
+        console.log('OpenRouter API 响应:', rawResponse)
+
+        if (!rawResponse) {
+          throw new Error('OpenRouter API 返回空响应')
+        }
+
+        openRouterResponse = JSON.parse(rawResponse)
+      } catch (parseError) {
+        console.error('解析 OpenRouter API 响应失败:', parseError)
+        return NextResponse.json(
+          { error: '解析 OpenRouter API 响应失败' },
+          { status: 500 }
+        )
+      }
+
+      if (!response.ok) {
+        return NextResponse.json(
+          { error: '调用 AI 服务失败', details: openRouterResponse },
+          { status: response.status }
+        )
+      }
+
+      return NextResponse.json(openRouterResponse, { status: 200 })
+    }
   } catch (error) {
     console.error('调用 AI 服务时发生错误:', error)
     return NextResponse.json(

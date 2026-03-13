@@ -60,7 +60,7 @@ curl -X POST http://localhost:3000/api/v1/ai \
   }'
 ```
 
-**JavaScript 调用示例**:
+**JavaScript 调用示例** (非流式):
 
 ```javascript
 const response = await fetch('http://localhost:3000/api/v1/ai', {
@@ -78,6 +78,61 @@ const response = await fetch('http://localhost:3000/api/v1/ai', {
 
 const data = await response.json();
 console.log(data);
+```
+
+**JavaScript 调用示例** (流式输出):
+
+```javascript
+const response = await fetch('http://localhost:3000/api/v1/ai', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    model: 'deepseek/deepseek-v3.2',
+    messages: [
+      { role: 'user', content: '你好，请介绍一下你自己' }
+    ],
+    stream: true, // 启用流式输出
+  }),
+});
+
+if (!response.body) {
+  console.error('No response body');
+  return;
+}
+
+const reader = response.body.getReader();
+const decoder = new TextDecoder();
+
+while (true) {
+  const { done, value } = await reader.read();
+  if (done) break;
+  
+  const chunk = decoder.decode(value, { stream: true });
+  
+  // 解析 SSE 事件
+  const lines = chunk.split('\n');
+  for (const line of lines) {
+    if (line.startsWith('data: ')) {
+      const data = line.slice(6);
+      if (data === '[DONE]') {
+        console.log('Stream completed');
+      } else {
+        try {
+          const json = JSON.parse(data);
+          if (json.choices && json.choices[0]?.delta?.content) {
+            const content = json.choices[0].delta.content;
+            console.log('Received content:', content);
+            // 在这里更新 UI，逐字显示内容
+          }
+        } catch (e) {
+          console.error('Error parsing JSON:', e);
+        }
+      }
+    }
+  }
+}
 ```
 
 **响应示例**:
