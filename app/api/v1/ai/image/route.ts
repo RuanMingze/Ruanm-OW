@@ -38,7 +38,7 @@ async function handleRequest(request: NextRequest) {
     }
 
     let prompt: string
-    let model: string = 'google/gemini-2.5-flash-image-preview'
+    let model: string = 'bytedance-seed/seedream-4.5'
     let size: string = '1024x1024'
     let quality: string = 'standard'
     let n: number = 1
@@ -89,7 +89,7 @@ async function handleRequest(request: NextRequest) {
       )
     }
 
-    const response = await fetch('https://openrouter.ai/api/v1/images/generations', {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -98,40 +98,59 @@ async function handleRequest(request: NextRequest) {
         'X-Title': 'Ruanm',
       },
       body: JSON.stringify({
-        model,
-        prompt,
-        size,
-        quality,
-        n,
+        model: model || 'alibaba/qwen-image',
+        messages: [
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        max_tokens: 1024,
+        temperature: 0.7
       }),
     })
 
-    let openRouterResponse
     try {
       const rawResponse = await response.text()
-      console.log('OpenRouter API 响应:', rawResponse)
+      console.log('OpenRouter API 响应状态:', response.status)
+      console.log('OpenRouter API 响应头:', Object.fromEntries(response.headers))
+      console.log('OpenRouter API 响应内容:', rawResponse)
 
       if (!rawResponse) {
-        throw new Error('OpenRouter API 返回空响应')
+        return NextResponse.json(
+          { error: 'OpenRouter API 返回空响应' },
+          { status: 500, headers: corsHeaders }
+        )
       }
 
-      openRouterResponse = JSON.parse(rawResponse)
-    } catch (parseError) {
-      console.error('解析 OpenRouter API 响应失败:', parseError)
+      // 尝试解析 JSON，如果失败则直接返回原始响应
+      try {
+        const openRouterResponse = JSON.parse(rawResponse)
+        if (!response.ok) {
+          return NextResponse.json(
+            { error: '调用 AI 服务失败', details: openRouterResponse },
+            { status: response.status, headers: corsHeaders }
+          )
+        }
+        return NextResponse.json(openRouterResponse, { status: 200, headers: corsHeaders })
+      } catch (parseError) {
+        console.warn('JSON 解析失败，直接返回原始响应:', parseError)
+        // 直接返回原始响应
+        return new NextResponse(rawResponse, {
+          status: response.status,
+          headers: {
+            ...corsHeaders,
+            'Content-Type': response.headers.get('Content-Type') || 'text/plain',
+          },
+        })
+      }
+    } catch (error) {
+      console.error('处理响应时发生错误:', error)
       return NextResponse.json(
-        { error: '解析 OpenRouter API 响应失败' },
+        { error: '处理响应时发生内部错误' },
         { status: 500, headers: corsHeaders }
       )
     }
-
-    if (!response.ok) {
-      return NextResponse.json(
-        { error: '调用 AI 服务失败', details: openRouterResponse },
-        { status: response.status, headers: corsHeaders }
-      )
-    }
-
-    return NextResponse.json(openRouterResponse, { status: 200, headers: corsHeaders })
   } catch (error) {
     console.error('调用 AI 服务时发生错误:', error)
     return NextResponse.json(
