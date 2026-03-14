@@ -10,11 +10,19 @@ const corsHeaders = {
   'Access-Control-Max-Age': '86400',
 }
 
+type MessageContent = string | Array<{
+  type: 'text' | 'image_url'
+  text?: string
+  image_url?: {
+    url: string
+  }
+}>
+
 interface AIRequest {
   model?: string
   messages: Array<{
     role: 'system' | 'user' | 'assistant'
-    content: string
+    content: MessageContent
   }>
   temperature?: number
   max_tokens?: number
@@ -98,6 +106,10 @@ export async function POST(request: NextRequest) {
 
       const readable = new ReadableStream({
         async start(controller) {
+          if (!response.body) {
+            controller.error(new Error('OpenRouter API 未返回流式响应'))
+            return
+          }
           const reader = response.body.getReader()
           let done = false
 
