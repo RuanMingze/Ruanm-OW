@@ -13,3 +13,8 @@ pnpm-lock.yaml
 
 # Desktop folder (Electron app)
 /Desktop/
+
+# Backend folder (Railway deployment)
+Backend/node_modules/
+Backend/.env
+Backend/*.log

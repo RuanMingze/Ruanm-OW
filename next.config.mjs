@@ -11,6 +11,12 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  // 排除 Backend 文件夹
+  experimental: {
+    outputFileTracingExcludes: {
+      '*': ['./Backend/**/*'],
+    },
+  },
 }
 
 export default nextConfig
