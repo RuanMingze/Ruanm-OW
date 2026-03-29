@@ -235,8 +235,8 @@ export function ProductsSection() {
       id: 1,
       title: 'PaperStation 浏览器',
       description: '基于 Electron + Chromium 打造的现代化浏览器，支持知识捕获、智能总结、结构化导出等功能。不只是浏览器，更是你的知识助手。',
-      icon: 'https://ruanmingze.github.io/images/logo.png',
-      screenshot: 'https://ruanmingze.github.io/images/screenshot.png',
+      icon: 'https://paperstation-introduction-page.pages.dev/images/logo.png',
+      screenshot: 'https://paperstation-introduction-page.pages.dev/images/screenshot.png',
       detailUrl: 'https://paperstation-introduction-page.pages.dev/',
       downloadUrl: null
     },
