@@ -10,7 +10,7 @@ const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
 const products = [
   { id: 'paperstation', name: 'PaperStation 浏览器' },
   { id: 'screensaver', name: 'RuanmScreenSaver 屏保程序' },
-  { id: 'toolbox', name: '阮铭泽工具箱' },
+  { id: 'toolbox', name: 'TheGuide工具箱' },
   { id: 'ai', name: '小R AI助手' },
   { id: 'search', name: 'ChickRubGo搜索引擎' },
 ]

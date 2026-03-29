@@ -337,7 +337,7 @@ PaperStation 浏览器的界面由以下部分组成：
     },
     {
       id: 'toolbox',
-      title: '阮铭泽工具箱',
+      title: 'TheGuide工具箱',
       sections: [
         {
           id: 'quickstart',
@@ -345,7 +345,7 @@ PaperStation 浏览器的界面由以下部分组成：
           content: `
 ## 下载与安装
 
-访问 [阮铭泽工具箱](https://ruanmingze.github.io/Ruanm-Official-Website/toolbox.html) 下载最新版本。
+访问 [TheGuide工具箱](https://ruanmingze.github.io/Ruanm-Official-Website/toolbox.html) 下载最新版本。
 
 ### 系统要求
 - Windows 7+

@@ -237,7 +237,7 @@ export function ProductsSection() {
       description: '基于 Electron + Chromium 打造的现代化浏览器，支持知识捕获、智能总结、结构化导出等功能。不只是浏览器，更是你的知识助手。',
       icon: 'https://ruanmingze.github.io/images/logo.png',
       screenshot: 'https://ruanmingze.github.io/images/screenshot.png',
-      detailUrl: 'https://ruanmingze.github.io/PaperStation-Introduction-page/',
+      detailUrl: 'https://paperstation-introduction-page.pages.dev/',
       downloadUrl: null
     },
     {
@@ -251,11 +251,11 @@ export function ProductsSection() {
     },
     {
       id: 3,
-      title: '阮铭泽工具箱',
+      title: 'TheGuide 工具箱',
       description: '集天气查询、计算器、编程工具、系统知识于一体的实用工具箱，提升您的工作效率。支持 Windows、macOS 和 Linux 多平台。',
-      icon: 'https://ruanmingze.github.io/Ruanm-Official-Website/toolbox.png',
-      screenshot: 'https://luckycola.com.cn/public/imgs/luckycola_Imghub_forever_YQe7Brp717713116046035477.png',
-      detailUrl: 'https://ruanmingze.github.io/Ruanm-Official-Website/toolbox.html',
+      icon: 'https://ruanmingze.github.io/t-t-i/favicon.ico',
+      screenshot: 'https://luckycola.com.cn/public/imgs/luckycola_Imghub_forever_c4w8eKYK17747658308018006.png',
+      detailUrl: 'https://ruanmingze.github.io/t-t-i',
       downloadUrl: null
     },
     {

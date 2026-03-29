@@ -11,7 +11,7 @@ const basePath = process.env.NEXT_PUBLIC_BASE_PATH || ''
 const products: Record<string, string> = {
   paperstation: 'PaperStation 浏览器',
   screensaver: 'RuanmScreenSaver 屏保程序',
-  toolbox: '阮铭泽工具箱',
+  toolbox: 'TheGuide工具箱',
   ai: '小R AI助手',
   search: 'ChickRubGo搜索引擎',
 }

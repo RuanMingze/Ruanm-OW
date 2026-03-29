@@ -56,7 +56,7 @@ export default function TermsOfServicePage() {
               <ul className="list-disc list-inside space-y-2 ml-4">
                 <li>PaperStation 浏览器</li>
                 <li>RuanmScreenSaver 屏保程序</li>
-                <li>阮铭泽工具箱</li>
+                <li>TheGuide工具箱</li>
                 <li>小R AI助手</li>
                 <li>ChickRubGo 搜索引擎</li>
                 <li>相关文档和支持服务</li>
